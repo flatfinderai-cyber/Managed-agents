@@ -7,6 +7,7 @@
 # Protects renters from predatory letting agents and UN housing-rights violators
 
 import sys
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -73,7 +74,7 @@ class ComplianceResult:
 
 
 # How many points each violation type deducts (at full severity, verified)
-VIOLATION_PENALTIES = {
+VIOLATION_PENALTIES = defaultdict(lambda: 20, {
     ViolationType.UN_HOUSING_RIGHT:    71,
     ViolationType.ILLEGAL_SCREENING:   30,
     ViolationType.FRAUD:               50,
@@ -82,14 +83,14 @@ VIOLATION_PENALTIES = {
     ViolationType.HARASSMENT:          35,
     ViolationType.RENOVICTION:         30,
     ViolationType.MAINTENANCE_NEGLECT: 25,
-}
+})
 
-SEVERITY_MULTIPLIER = {
+SEVERITY_MULTIPLIER = defaultdict(lambda: 0.5, {
     Severity.LOW:      0.25,
     Severity.MEDIUM:   0.50,
     Severity.HIGH:     0.75,
     Severity.CRITICAL: 1.00,
-}
+})
 
 
 def score_agent(input: ComplianceInput) -> ComplianceResult:
@@ -124,8 +125,8 @@ def score_agent(input: ComplianceInput) -> ComplianceResult:
 
     # Process each violation
     for v in input.violations:
-        base_penalty = VIOLATION_PENALTIES.get(v.type, 20)
-        severity_mult = SEVERITY_MULTIPLIER.get(v.severity, 0.5)
+        base_penalty = VIOLATION_PENALTIES[v.type]
+        severity_mult = SEVERITY_MULTIPLIER[v.severity]
         verified_mult = 1.0 if v.verified else 0.4
 
         penalty = base_penalty * severity_mult * verified_mult
