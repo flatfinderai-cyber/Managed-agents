@@ -84,12 +84,22 @@ VIOLATION_PENALTIES = {
     ViolationType.MAINTENANCE_NEGLECT: 25,
 }
 
+# Ensure all ViolationType enum values have a default penalty of 20 if missing
+for _vt in ViolationType:
+    if _vt not in VIOLATION_PENALTIES:
+        VIOLATION_PENALTIES[_vt] = 20
+
 SEVERITY_MULTIPLIER = {
     Severity.LOW:      0.25,
     Severity.MEDIUM:   0.50,
     Severity.HIGH:     0.75,
     Severity.CRITICAL: 1.00,
 }
+
+# Ensure all Severity enum values have a default multiplier of 0.5 if missing
+for _sev in Severity:
+    if _sev not in SEVERITY_MULTIPLIER:
+        SEVERITY_MULTIPLIER[_sev] = 0.5
 
 
 def score_agent(input: ComplianceInput) -> ComplianceResult:
@@ -124,8 +134,8 @@ def score_agent(input: ComplianceInput) -> ComplianceResult:
 
     # Process each violation
     for v in input.violations:
-        base_penalty = VIOLATION_PENALTIES.get(v.type, 20)
-        severity_mult = SEVERITY_MULTIPLIER.get(v.severity, 0.5)
+        base_penalty = VIOLATION_PENALTIES[v.type]
+        severity_mult = SEVERITY_MULTIPLIER[v.severity]
         verified_mult = 1.0 if v.verified else 0.4
 
         penalty = base_penalty * severity_mult * verified_mult
