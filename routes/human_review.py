@@ -23,7 +23,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
-from supabase import create_client
+from supabase._async.client import AsyncClient
+from supabase.lib.client_options import ClientOptions
 
 router = APIRouter(tags=["Human Review"])
 
@@ -31,9 +32,10 @@ router = APIRouter(tags=["Human Review"])
 # Supabase client
 # ---------------------------------------------------------------------------
 
-_sb = create_client(
+_sb = AsyncClient(
     os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""),
     os.environ.get("SUPABASE_SERVICE_KEY", ""),
+    options=ClientOptions()
 )
 
 # ---------------------------------------------------------------------------
@@ -122,7 +124,7 @@ async def get_review_queue(x_internal_key: Optional[str] = Header(None)):
     _require_internal_key(x_internal_key)
 
     try:
-        result = (
+        result = await (
             _sb.table("human_reviews")
             .select("*")
             .eq("status", "open")
@@ -145,7 +147,7 @@ async def get_review_queue(x_internal_key: Optional[str] = Header(None)):
 async def get_review(review_id: str):
     """Return full details for a single review."""
     try:
-        result = (
+        result = await (
             _sb.table("human_reviews")
             .select("*")
             .eq("id", review_id)
@@ -174,7 +176,7 @@ async def assign_review(review_id: str, body: AssignReviewRequest):
     SLA: tier1=48h, tier2=5 business days, tier3=10 business days.
     """
     try:
-        review_result = (
+        review_result = await (
             _sb.table("human_reviews")
             .select("id, tier, status")
             .eq("id", review_id)
@@ -204,7 +206,7 @@ async def assign_review(review_id: str, body: AssignReviewRequest):
     }
 
     try:
-        result = (
+        result = await (
             _sb.table("human_reviews")
             .update(update_payload)
             .eq("id", review_id)
@@ -246,7 +248,7 @@ async def record_outcome(review_id: str, body: OutcomeRequest):
         )
 
     try:
-        review_result = (
+        review_result = await (
             _sb.table("human_reviews")
             .select("*")
             .eq("id", review_id)
@@ -292,7 +294,7 @@ async def record_outcome(review_id: str, body: OutcomeRequest):
                 "issued_at": now,
             }
             try:
-                _sb.table("platform_credits").insert(credit_record).execute()
+                await _sb.table("platform_credits").insert(credit_record).execute()
                 actions_taken.append("platform_credit_issued")
             except Exception:
                 pass  # Non-fatal — outcome is still recorded
@@ -309,9 +311,11 @@ async def record_outcome(review_id: str, body: OutcomeRequest):
                 "tenant_profiles" if subject_type == "tenant" else "landlord_profiles"
             )
             try:
-                _sb.table(profile_table).update(
-                    {"verification_status": "suspended", "updated_at": now}
-                ).eq("user_id", subject_id).execute()
+                await (
+                    _sb.table(profile_table).update(
+                        {"verification_status": "suspended", "updated_at": now}
+                    ).eq("user_id", subject_id).execute()
+                )
                 actions_taken.append(f"{profile_table}_verification_status_set_suspended")
             except Exception as exc:
                 raise _db_error(exc)
@@ -328,7 +332,7 @@ async def record_outcome(review_id: str, body: OutcomeRequest):
         existing_flag = None
         if listing_id:
             try:
-                flag_check = (
+                flag_check = await (
                     _sb.table("discrimination_flags")
                     .select("id")
                     .eq("listing_id", listing_id)
@@ -355,7 +359,7 @@ async def record_outcome(review_id: str, body: OutcomeRequest):
                 "created_at": now,
             }
             try:
-                _sb.table("discrimination_flags").insert(flag_record).execute()
+                await _sb.table("discrimination_flags").insert(flag_record).execute()
                 actions_taken.append("discrimination_flag_created")
             except Exception as exc:
                 raise _db_error(exc)
@@ -364,7 +368,7 @@ async def record_outcome(review_id: str, body: OutcomeRequest):
 
     # Save outcome to review record
     try:
-        result = (
+        result = await (
             _sb.table("human_reviews")
             .update(update_payload)
             .eq("id", review_id)
@@ -420,7 +424,7 @@ async def create_flag(body: FlagRequest):
     # Fetch listing to get landlord_user_id
     # ------------------------------------------------------------------
     try:
-        listing_result = (
+        listing_result = await (
             _sb.table("listings")
             .select("id, landlord_user_id, is_active")
             .eq("id", body.listing_id)
@@ -445,33 +449,39 @@ async def create_flag(body: FlagRequest):
         # Ban the landlord account
         if landlord_user_id:
             try:
-                _sb.table("landlord_profiles").update(
-                    {"verification_status": "banned", "updated_at": now}
-                ).eq("user_id", landlord_user_id).execute()
+                await (
+                    _sb.table("landlord_profiles").update(
+                        {"verification_status": "banned", "updated_at": now}
+                    ).eq("user_id", landlord_user_id).execute()
+                )
                 actions_taken.append("landlord_account_banned")
             except Exception as exc:
                 raise _db_error(exc)
 
             # Add to do_not_fly_list
             try:
-                _sb.table("do_not_fly_list").insert(
-                    {
-                        "id": str(uuid.uuid4()),
-                        "user_id": landlord_user_id,
-                        "reason": f"auto_ban_flag_{flag_id}",
-                        "flag_id": flag_id,
-                        "created_at": now,
-                    }
-                ).execute()
+                await (
+                    _sb.table("do_not_fly_list").insert(
+                        {
+                            "id": str(uuid.uuid4()),
+                            "user_id": landlord_user_id,
+                            "reason": f"auto_ban_flag_{flag_id}",
+                            "flag_id": flag_id,
+                            "created_at": now,
+                        }
+                    ).execute()
+                )
                 actions_taken.append("added_to_do_not_fly_list")
             except Exception as exc:
                 raise _db_error(exc)
 
         # Deactivate listing
         try:
-            _sb.table("listings").update(
-                {"is_active": False, "updated_at": now}
-            ).eq("id", body.listing_id).execute()
+            await (
+                _sb.table("listings").update(
+                    {"is_active": False, "updated_at": now}
+                ).eq("id", body.listing_id).execute()
+            )
             actions_taken.append("listing_deactivated")
         except Exception as exc:
             raise _db_error(exc)
@@ -484,36 +494,40 @@ async def create_flag(body: FlagRequest):
 
         # Suspend the listing
         try:
-            _sb.table("listings").update(
-                {"is_active": False, "is_suspended": True, "updated_at": now}
-            ).eq("id", body.listing_id).execute()
+            await (
+                _sb.table("listings").update(
+                    {"is_active": False, "is_suspended": True, "updated_at": now}
+                ).eq("id", body.listing_id).execute()
+            )
             actions_taken.append("listing_suspended")
         except Exception as exc:
             raise _db_error(exc)
 
         # Queue human review — tier 1, 24h priority
         try:
-            _sb.table("human_reviews").insert(
-                {
-                    "id": str(uuid.uuid4()),
-                    "subject_type": "listing",
-                    "subject_id": body.listing_id,
-                    "review_type": f"flag_{body.flag_type}",
-                    "tier": 1,
-                    "status": "open",
-                    "priority_hours": 24,
-                    "metadata": {
-                        "flag_id": flag_id,
-                        "listing_id": body.listing_id,
-                        "landlord_user_id": landlord_user_id,
-                        "flag_type": body.flag_type,
-                        "grounds": body.grounds,
-                        "confidence_score": body.confidence_score,
-                        "flagged_content": body.flagged_content,
-                    },
-                    "created_at": now,
-                }
-            ).execute()
+            await (
+                _sb.table("human_reviews").insert(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "subject_type": "listing",
+                        "subject_id": body.listing_id,
+                        "review_type": f"flag_{body.flag_type}",
+                        "tier": 1,
+                        "status": "open",
+                        "priority_hours": 24,
+                        "metadata": {
+                            "flag_id": flag_id,
+                            "listing_id": body.listing_id,
+                            "landlord_user_id": landlord_user_id,
+                            "flag_type": body.flag_type,
+                            "grounds": body.grounds,
+                            "confidence_score": body.confidence_score,
+                            "flagged_content": body.flagged_content,
+                        },
+                        "created_at": now,
+                    }
+                ).execute()
+            )
             actions_taken.append("human_review_queued_24h")
         except Exception as exc:
             raise _db_error(exc)
@@ -525,19 +539,21 @@ async def create_flag(body: FlagRequest):
     if body.flag_type == "predatory":
         law_enforcement_referral = True
         try:
-            _sb.table("law_enforcement_referrals").insert(
-                {
-                    "id": str(uuid.uuid4()),
-                    "flag_id": flag_id,
-                    "listing_id": body.listing_id,
-                    "landlord_user_id": landlord_user_id,
-                    "grounds": body.grounds,
-                    "flagged_content": body.flagged_content,
-                    "confidence_score": body.confidence_score,
-                    "referral_status": "pending",
-                    "created_at": now,
-                }
-            ).execute()
+            await (
+                _sb.table("law_enforcement_referrals").insert(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "flag_id": flag_id,
+                        "listing_id": body.listing_id,
+                        "landlord_user_id": landlord_user_id,
+                        "grounds": body.grounds,
+                        "flagged_content": body.flagged_content,
+                        "confidence_score": body.confidence_score,
+                        "referral_status": "pending",
+                        "created_at": now,
+                    }
+                ).execute()
+            )
             actions_taken.append("law_enforcement_referral_created")
         except Exception as exc:
             raise _db_error(exc)
@@ -560,7 +576,7 @@ async def create_flag(body: FlagRequest):
     }
 
     try:
-        result = _sb.table("discrimination_flags").insert(flag_record).execute()
+        result = await _sb.table("discrimination_flags").insert(flag_record).execute()
     except Exception as exc:
         raise _db_error(exc)
 
