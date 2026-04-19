@@ -20,6 +20,7 @@ supabase = create_client(
 )
 
 ALLOWED_CITIES = frozenset({"Toronto", "Vancouver", "Paris", "Edinburgh"})
+_ALLOWED_CITIES_LOWER = {c.lower(): c for c in ALLOWED_CITIES}
 PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
 DEFAULT_PERPLEXITY_MODEL = "sonar"
 
@@ -63,10 +64,9 @@ class ListingSearchFilters(BaseModel):
     @field_validator("city")
     @classmethod
     def city_allowed(cls, v: str) -> str:
-        t = (v or "").strip()
-        for c in ALLOWED_CITIES:
-            if t.lower() == c.lower():
-                return c
+        t = (v or "").strip().lower()
+        if t in _ALLOWED_CITIES_LOWER:
+            return _ALLOWED_CITIES_LOWER[t]
         raise ValueError(f"city must be one of: {', '.join(sorted(ALLOWED_CITIES))}")
 
     @field_validator("max_rent")
