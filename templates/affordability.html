@@ -1,0 +1,185 @@
+<!-- © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™: Housing Revolutionised™ -->
+{% extends "base.html" %}
+{% block title %}Affordability Calculator — FlatFinder™{% endblock %}
+{% block content %}
+<div class="container section--lg">
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-bottom: 3rem">
+    <!-- What Can I Afford -->
+    <div>
+      <h2 style="font-size: 1.1rem; margin-bottom: 1.5rem; color: var(--colour-text-primary)">What Can I Afford?</h2>
+      <div style="background: var(--colour-bg-card); padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 1rem">
+        <label for="income-calc" style="display: block; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary)">Annual Income</label>
+        <input id="income-calc" type="number" placeholder="e.g. 60000" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem; margin-bottom: 1rem">
+        <button id="calc-btn" class="btn btn--primary" style="width: 100%">Calculate</button>
+      </div>
+      <div id="afford-results" style="display: none">
+        <div id="afford-range" style="background: var(--colour-bg-card); padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 1rem">
+          <p style="font-size: 0.9rem; color: var(--colour-text-muted); margin-bottom: 0.5rem">Monthly Budget</p>
+          <p style="font-size: 1.8rem; font-weight: 800; color: var(--colour-orange)">
+            <span id="afford-lower">£0</span> – <span id="afford-upper">£0</span>
+          </p>
+          <p style="font-size: 0.8rem; color: var(--colour-text-muted); margin-top: 1rem; line-height: 1.5">
+            Based on the fair 33–40% income rule. At 33%, you keep more for other expenses. At 40%, you're at the legal limit in most jurisdictions.
+          </p>
+        </div>
+        <div style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 1rem; border-radius: 0.5rem; font-size: 0.85rem; color: var(--colour-text-secondary)">
+          <strong style="color: #22c55e">✓ This is legal</strong> — The 3× multiplier is not law. Landlords use it to screen tenants, not to set affordability.
+        </div>
+      </div>
+    </div>
+
+    <!-- Is This Landlord Breaking the Law -->
+    <div>
+      <h2 style="font-size: 1.1rem; margin-bottom: 1.5rem; color: var(--colour-text-primary)">Is This Landlord Breaking the Law?</h2>
+      <div style="background: var(--colour-bg-card); padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 1rem">
+        <label for="check-rent" style="display: block; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary)">Monthly Rent They're Advertising</label>
+        <input id="check-rent" type="number" placeholder="e.g. 1500" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem; margin-bottom: 1rem">
+
+        <label for="check-income" style="display: block; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary)">Monthly Income They Require</label>
+        <input id="check-income" type="number" placeholder="e.g. 4500" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem; margin-bottom: 1rem">
+
+        <button id="check-btn" class="btn btn--primary" style="width: 100%">Check It</button>
+      </div>
+      <div id="screening-results" style="display: none">
+        <div id="screening-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rights by City -->
+  <h2 style="font-size: 1.3rem; margin-bottom: 2rem; margin-top: 3rem; color: var(--colour-text-primary)">⚖️ Your Rights by City</h2>
+  <div class="grid grid--auto" style="margin-bottom: 3rem">
+    <div class="card">
+      <h3 style="font-size: 1rem; color: var(--colour-orange); margin-bottom: 1rem">🍁 Toronto, Ontario</h3>
+      <ul style="font-size: 0.9rem; color: var(--colour-text-secondary); line-height: 1.6; list-style: none; padding: 0">
+        <li style="margin-bottom: 0.5rem">✓ Application fees are <strong>banned</strong> (Residential Tenancies Act, 2006)</li>
+        <li style="margin-bottom: 0.5rem">✓ No 3× multiplier — illegality varies by municipality</li>
+        <li style="margin-bottom: 0.5rem">✓ Rent increase limits: annual indexing + discretionary above</li>
+        <li>✓ Security deposit max: one month's rent</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size: 1rem; color: var(--colour-orange); margin-bottom: 1rem">🍁 Vancouver, British Columbia</h3>
+      <ul style="font-size: 0.9rem; color: var(--colour-text-secondary); line-height: 1.6; list-style: none; padding: 0">
+        <li style="margin-bottom: 0.5rem">✓ Application fees are <strong>banned</strong> (Residential Tenancy Act)</li>
+        <li style="margin-bottom: 0.5rem">✓ Security deposit max: one month's rent</li>
+        <li style="margin-bottom: 0.5rem">✓ Rent increase cap: CPI + 1% (provincial)</li>
+        <li>✓ No fixed multiplier rule — affordability is tenant's choice</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size: 1rem; color: var(--colour-orange); margin-bottom: 1rem">🇫🇷 Paris, France</h3>
+      <ul style="font-size: 0.9rem; color: var(--colour-text-secondary); line-height: 1.6; list-style: none; padding: 0">
+        <li style="margin-bottom: 0.5rem">✓ Deposit max: one month's rent (not refundable)</li>
+        <li style="margin-bottom: 0.5rem">✓ Annual increase limited to inflation index (IRL)</li>
+        <li style="margin-bottom: 0.5rem">✓ First-month fees capped at €300 (Loi Alur)</li>
+        <li>✓ Affordability = tenant's negotiation, not legal multiplier</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size: 1rem; color: var(--colour-orange); margin-bottom: 1rem">🏴󠁧󠁢󠁳󠁣󠁴󠁿 Edinburgh, Scotland</h3>
+      <ul style="font-size: 0.9rem; color: var(--colour-text-secondary); line-height: 1.6; list-style: none; padding: 0">
+        <li style="margin-bottom: 0.5rem">✓ Deposit protection mandatory (within 30 days, Tenancy Deposit Schemes)</li>
+        <li style="margin-bottom: 0.5rem">✓ No application fees (Private Housing Tenancy, 2016)</li>
+        <li style="margin-bottom: 0.5rem">✓ Rent rises limited to RPI inflation</li>
+        <li>✓ Affordability at tenant's discretion — no legal multiplier</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Rights Reminder -->
+  <h2 style="font-size: 1.3rem; margin-bottom: 2rem; color: var(--colour-text-primary)">🚀 Rights You Need to Know</h2>
+  <div class="grid grid--auto" style="margin-bottom: 3rem">
+    <div class="card" style="border-left: 3px solid var(--colour-orange)">
+      <h3 style="font-size: 0.95rem; color: var(--colour-orange); margin-bottom: 0.75rem">🚫 No Application Fees (Ontario)</h3>
+      <p style="font-size: 0.85rem; color: var(--colour-text-secondary); line-height: 1.5">
+        Ontario banned upfront application fees in January 2022. Any landlord asking for one is breaking the law. Report them to the Landlord and Tenant Board.
+      </p>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--colour-orange)">
+      <h3 style="font-size: 0.95rem; color: var(--colour-orange); margin-bottom: 0.75rem">⚖️ The 3× Multiplier is Not Law</h3>
+      <p style="font-size: 0.85rem; color: var(--colour-text-secondary); line-height: 1.5">
+        No jurisdiction legally requires tenants to earn 3× the rent. Landlords use this rule to screen — you have the right to negotiate or find an agent-verified listing.
+      </p>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--colour-orange)">
+      <h3 style="font-size: 0.95rem; color: var(--colour-orange); margin-bottom: 0.75rem">🐱 Ask Benny Anything</h3>
+      <p style="font-size: 0.85rem; color: var(--colour-text-secondary); line-height: 1.5">
+        Go to <a href="/search" style="color: var(--colour-orange); text-decoration: none; font-weight: 600">Search Listings</a> and click "Ask Benny" to chat about your local rights, eviction rules, or lease disputes.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('calc-btn').addEventListener('click', calculateAffordability);
+    document.getElementById('check-btn').addEventListener('click', checkScreening);
+    document.getElementById('income-calc').addEventListener('keydown', e => {
+      if (e.key === 'Enter') calculateAffordability();
+    });
+    document.getElementById('check-income').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkScreening();
+    });
+  });
+
+  async function calculateAffordability() {
+    const income = parseFloat(document.getElementById('income-calc').value);
+    if (!income || income < 0) {
+      alert('Please enter a valid annual income.');
+      return;
+    }
+
+    const monthlyIncome = income / 12;
+    const lower = Math.floor(monthlyIncome * 0.33);
+    const upper = Math.floor(monthlyIncome * 0.40);
+
+    document.getElementById('afford-lower').textContent = '£' + lower.toLocaleString();
+    document.getElementById('afford-upper').textContent = '£' + upper.toLocaleString();
+    document.getElementById('afford-results').style.display = 'block';
+  }
+
+  async function checkScreening() {
+    const rent = parseFloat(document.getElementById('check-rent').value);
+    const income = parseFloat(document.getElementById('check-income').value);
+
+    if (!rent || !income || rent < 0 || income < 0) {
+      alert('Please enter valid rent and income amounts.');
+      return;
+    }
+
+    const multiplier = income / rent;
+    const resultsDiv = document.getElementById('screening-result');
+
+    if (multiplier < 3) {
+      resultsDiv.innerHTML = `<div style="background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e; padding: 1rem; border-radius: 0.5rem; color: var(--colour-text-secondary); font-size: 0.9rem">
+        <p style="color: #22c55e; font-weight: 700; margin-bottom: 0.5rem">✓ This screening is legal</p>
+        <p>Income-to-rent multiplier: <strong>${multiplier.toFixed(2)}×</strong></p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem">However, the affordability rule (33–40% of income) takes priority in many jurisdictions. Verify local laws.</p>
+      </div>`;
+    } else if (multiplier <= 3) {
+      resultsDiv.innerHTML = `<div style="background: rgba(249, 115, 22, 0.1); border-left: 3px solid var(--colour-orange); padding: 1rem; border-radius: 0.5rem; color: var(--colour-text-secondary); font-size: 0.9rem">
+        <p style="color: var(--colour-orange); font-weight: 700; margin-bottom: 0.5rem">⚠️ At the legal limit</p>
+        <p>Income-to-rent multiplier: <strong>${multiplier.toFixed(2)}×</strong></p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem">This is borderline. The 33–40% affordability rule is the true measure. You may want to negotiate or look for other listings.</p>
+      </div>`;
+    } else {
+      resultsDiv.innerHTML = `<div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 1rem; border-radius: 0.5rem; color: var(--colour-text-secondary); font-size: 0.9rem">
+        <p style="color: #ef4444; font-weight: 700; margin-bottom: 0.5rem">🚫 Likely unfair screening</p>
+        <p>Income-to-rent multiplier: <strong>${multiplier.toFixed(2)}×</strong> (above the typical 3× threshold)</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem">This landlord is using an unusually strict screening criterion. FlatFinder™ recommends moving on to agent-verified listings where affordability is pre-validated.</p>
+      </div>`;
+    }
+
+    document.getElementById('screening-results').style.display = 'block';
+  }
+</script>
+{% endblock %}

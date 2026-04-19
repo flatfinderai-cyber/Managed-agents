@@ -1,0 +1,230 @@
+<!-- © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™: Housing Revolutionised™ -->
+{% extends "base.html" %}
+{% block title %}Renter Demands — FlatFinder™{% endblock %}
+{% block content %}
+<div class="container section--lg">
+  <!-- Hero -->
+  <div style="margin-bottom: 3rem">
+    <h1 style="font-size: 2rem; color: var(--colour-text-primary); margin-bottom: 0.5rem">✊ Renter Demands</h1>
+    <p style="font-size: 1.1rem; color: var(--colour-text-secondary); margin-bottom: 1.5rem">Know your rights. Send the letter. Make them comply.</p>
+    <div style="display: inline-block; background: rgba(249, 115, 22, 0.1); border-left: 3px solid var(--colour-orange); padding: 0.75rem 1rem; border-radius: 0.5rem; font-size: 0.85rem; color: var(--colour-text-secondary)">
+      <strong style="color: var(--colour-orange)">Max Plan & Ultra Plan Feature</strong> — Free renter access to demand templates and builder.
+    </div>
+  </div>
+
+  <!-- City filter -->
+  <div style="margin-bottom: 2rem">
+    <label for="city-filter" style="display: block; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary); font-weight: 600">Filter by City</label>
+    <select id="city-filter" style="padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem; min-width: 200px">
+      <option value="all">All Cities</option>
+      <option value="toronto">Toronto</option>
+      <option value="vancouver">Vancouver</option>
+      <option value="paris">Paris</option>
+      <option value="edinburgh">Edinburgh</option>
+    </select>
+  </div>
+
+  <!-- Demand templates grid -->
+  <div class="grid grid--auto" style="margin-bottom: 3rem">
+    {% for tmpl in demand_templates %}
+      <div class="card demand-card" data-city="{{ tmpl.city or 'global' }}" data-id="{{ tmpl.id }}" style="display: flex; flex-direction: column">
+        <h3 style="font-size: 1rem; color: var(--colour-text-primary); margin-bottom: 0.75rem">{{ tmpl.title }}</h3>
+        <p style="font-size: 0.85rem; color: var(--colour-text-secondary); margin-bottom: 1rem; line-height: 1.5; flex-grow: 1">
+          {{ tmpl.description[:200] }}{% if tmpl.description|length > 200 %}...{% endif %}
+        </p>
+        <p style="color: var(--colour-orange); font-size: 0.8rem; margin-bottom: 1rem; font-weight: 600">
+          Legal basis: {{ tmpl.legal_basis }}
+        </p>
+        <button class="btn btn--primary btn--sm" onclick="openDemand('{{ tmpl.id|e }}', '{{ tmpl.title|e }}', `{{ tmpl.description|e }}`, '{{ tmpl.legal_basis|e }}')">Use This Demand</button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Rights reminder -->
+  <h2 style="font-size: 1.3rem; margin-bottom: 2rem; color: var(--colour-text-primary)">📋 Rights & Resources</h2>
+  <div class="grid grid--auto">
+    <div class="card" style="border-left: 3px solid var(--colour-orange)">
+      <h3 style="font-size: 0.95rem; color: var(--colour-orange); margin-bottom: 0.75rem">🚫 No Application Fees (Ontario)</h3>
+      <p style="font-size: 0.85rem; color: var(--colour-text-secondary); line-height: 1.5">
+        Ontario banned upfront application fees in January 2022. Any landlord asking for one is breaking the law. Report to the Landlord and Tenant Board.
+      </p>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--colour-orange)">
+      <h3 style="font-size: 0.95rem; color: var(--colour-orange); margin-bottom: 0.75rem">⚖️ The 3× Multiplier is Not Law</h3>
+      <p style="font-size: 0.85rem; color: var(--colour-text-secondary); line-height: 1.5">
+        No jurisdiction legally requires tenants to earn 3× the rent. Landlords use this rule to screen — you have the right to negotiate or find agent-verified listings.
+      </p>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--colour-orange)">
+      <h3 style="font-size: 0.95rem; color: var(--colour-orange); margin-bottom: 0.75rem">🐱 Ask Benny Anything</h3>
+      <p style="font-size: 0.85rem; color: var(--colour-text-secondary); line-height: 1.5">
+        Go to <a href="/search" style="color: var(--colour-orange); text-decoration: none; font-weight: 600">Search Listings</a> and click "Ask Benny" for help with lease disputes or local tenant rights.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Demand builder modal -->
+<div id="demand-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; overflow-y: auto">
+  <div style="background: var(--colour-bg); margin: 2rem auto; padding: 2rem; border-radius: 0.75rem; max-width: 700px; position: relative">
+    <button onclick="closeDemand()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; color: var(--colour-text-muted); cursor: pointer">×</button>
+
+    <h2 id="demand-title" style="font-size: 1.3rem; color: var(--colour-text-primary); margin-bottom: 1.5rem"></h2>
+
+    <div style="background: var(--colour-bg-card); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem">
+      <div style="margin-bottom: 1rem">
+        <label style="display: block; font-size: 0.85rem; color: var(--colour-text-secondary); margin-bottom: 0.5rem">Your Name</label>
+        <input id="demand-name" type="text" placeholder="Your full name" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+      </div>
+
+      <div style="margin-bottom: 1rem">
+        <label style="display: block; font-size: 0.85rem; color: var(--colour-text-secondary); margin-bottom: 0.5rem">Landlord Name</label>
+        <input id="demand-landlord" type="text" placeholder="Landlord or property manager name" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+      </div>
+
+      <div style="margin-bottom: 1rem">
+        <label style="display: block; font-size: 0.85rem; color: var(--colour-text-secondary); margin-bottom: 0.5rem">Property Address</label>
+        <input id="demand-address" type="text" placeholder="123 Main St, City, Country" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+      </div>
+
+      <div style="margin-bottom: 1rem">
+        <label style="display: block; font-size: 0.85rem; color: var(--colour-text-secondary); margin-bottom: 0.5rem">Date</label>
+        <input id="demand-date" type="date" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+      </div>
+
+      <div style="margin-bottom: 1rem">
+        <label style="display: block; font-size: 0.85rem; color: var(--colour-text-secondary); margin-bottom: 0.5rem">Your Email</label>
+        <input id="demand-email" type="email" placeholder="your.email@example.com" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+      </div>
+    </div>
+
+    <!-- Letter preview -->
+    <div style="background: var(--colour-bg-card); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem">
+      <p style="font-size: 0.85rem; color: var(--colour-text-muted); margin-bottom: 1rem">Preview</p>
+      <textarea id="demand-preview" readonly style="width: 100%; height: 300px; padding: 1rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.85rem; font-family: monospace; resize: vertical"></textarea>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display: flex; gap: 1rem">
+      <button onclick="copyDemand()" class="btn btn--primary" style="flex: 1">Copy Letter</button>
+      <button onclick="downloadDemand()" class="btn btn--ghost" style="flex: 1">Download PDF</button>
+      <button onclick="closeDemand()" class="btn btn--ghost" style="flex: 1">Close</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentTemplate = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Set today's date by default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('demand-date').value = today;
+
+    // City filter
+    document.getElementById('city-filter').addEventListener('change', filterDemands);
+  });
+
+  function filterDemands() {
+    const selectedCity = document.getElementById('city-filter').value;
+    const cards = document.querySelectorAll('.demand-card');
+    cards.forEach(card => {
+      const cardCity = card.getAttribute('data-city');
+      if (selectedCity === 'all' || cardCity === selectedCity || cardCity === 'global') {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  function openDemand(id, title, description, legal_basis) {
+    currentTemplate = { id, title, description, legal_basis };
+    document.getElementById('demand-title').textContent = title;
+    document.getElementById('demand-modal').style.display = 'flex';
+    document.getElementById('demand-modal').style.alignItems = 'flex-start';
+    document.getElementById('demand-modal').style.justifyContent = 'center';
+
+    // Auto-generate letter preview
+    updatePreview();
+  }
+
+  function closeDemand() {
+    document.getElementById('demand-modal').style.display = 'none';
+    currentTemplate = null;
+  }
+
+  function updatePreview() {
+    if (!currentTemplate) return;
+
+    const name = document.getElementById('demand-name').value || '[Your Name]';
+    const landlord = document.getElementById('demand-landlord').value || '[Landlord Name]';
+    const address = document.getElementById('demand-address').value || '[Property Address]';
+    const date = document.getElementById('demand-date').value || new Date().toISOString().split('T')[0];
+    const email = document.getElementById('demand-email').value || '[Your Email]';
+
+    const letterText = `Dear ${landlord},
+
+RE: Formal Demand for Compliance — ${currentTemplate.title}
+Property: ${address}
+Date: ${date}
+
+I am writing to formally request that you comply with your legal obligations as a landlord under ${currentTemplate.legal_basis}.
+
+${currentTemplate.description}
+
+I expect your written response within 7 business days confirming your compliance. If you fail to respond or comply, I will escalate this matter to the relevant housing authority and explore legal remedies available to me.
+
+Thank you for your immediate attention to this matter.
+
+Yours sincerely,
+
+${name}
+Email: ${email}
+Property Address: ${address}
+`;
+
+    document.getElementById('demand-preview').value = letterText;
+  }
+
+  function copyDemand() {
+    const text = document.getElementById('demand-preview').value;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Letter copied to clipboard!');
+    }).catch(() => {
+      alert('Could not copy. Try manually selecting the text.');
+    });
+  }
+
+  function downloadDemand() {
+    const name = document.getElementById('demand-name').value || 'demand_letter';
+    const text = document.getElementById('demand-preview').value;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.replace(/\s+/g, '_')}_demand.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Update preview on input change
+  ['demand-name', 'demand-landlord', 'demand-address', 'demand-date', 'demand-email'].forEach(id => {
+    document.addEventListener('input', (e) => {
+      if (e.target.id === id) updatePreview();
+    }, true);
+  });
+
+  // Close modal on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('demand-modal').style.display !== 'none') {
+      closeDemand();
+    }
+  });
+</script>
+{% endblock %}

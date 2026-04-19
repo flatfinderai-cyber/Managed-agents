@@ -1,0 +1,267 @@
+<!-- © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™: Housing Revolutionised™ -->
+{% extends "base.html" %}
+{% block title %}Search Listings — FlatFinder™{% endblock %}
+{% block content %}
+<div class="bg-iso-grid" style="padding: 3rem 0">
+  <div class="container">
+    <!-- Benny toggle -->
+    <button id="benny-toggle" class="btn btn--ghost btn--sm" style="margin-bottom: 1.5rem; margin-left: auto; display: block">
+      🐱 Ask Benny
+    </button>
+
+    <!-- Search card -->
+    <div class="card" style="margin-bottom: 2rem">
+      <h1 style="font-size: 1.2rem; margin-bottom: 1.5rem; color: var(--colour-text-primary)">Find your next home — fairly priced, agent-verified</h1>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem">
+        <div>
+          <label for="city" style="display: block; font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary)">City</label>
+          <select id="city" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+            <option value="toronto">Toronto</option>
+            <option value="vancouver">Vancouver</option>
+            <option value="paris">Paris</option>
+            <option value="edinburgh">Edinburgh</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="income" style="display: block; font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary)">Annual Income</label>
+          <input id="income" type="number" placeholder="e.g. 72,000" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+          <div id="max-hint" style="display: none; font-size: 0.75rem; color: var(--colour-orange); margin-top: 0.25rem"></div>
+        </div>
+
+        <div>
+          <label for="max-rent" style="display: block; font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary)">Max Rent Override</label>
+          <input id="max-rent" type="number" placeholder="Leave blank for auto" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+        </div>
+
+        <div>
+          <label for="bedrooms" style="display: block; font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--colour-text-secondary)">Bedrooms</label>
+          <select id="bedrooms" style="width: 100%; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+            <option value="">Any</option>
+            <option value="0">Studio</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="search-btn" class="btn btn--primary" style="width: 100%; margin-bottom: 1rem">Search</button>
+
+      <p style="font-size: 0.8rem; color: var(--colour-text-muted); line-height: 1.4">
+        Affordability calculated using the 33–40% income rule — not the illegal 3× multiplier.
+      </p>
+    </div>
+
+    <!-- Benny chat box (hidden by default) -->
+    <div id="benny-box" style="display: none; background: var(--colour-bg-card); border-radius: 0.75rem; margin-bottom: 2rem; overflow: hidden">
+      <div style="background: var(--colour-orange); color: #fff; padding: 1rem; font-weight: 700">🐱 Benny — Your Housing Rights Assistant</div>
+      <div id="benny-msgs" style="padding: 1rem; min-height: 200px; max-height: 400px; overflow-y: auto; background: var(--colour-bg); border-bottom: 1px solid var(--colour-border)"></div>
+      <div style="display: flex; gap: 0.5rem; padding: 1rem">
+        <input id="benny-input" type="text" placeholder="Ask Benny about your rights..." style="flex: 1; padding: 0.75rem; background: var(--colour-bg-input); color: var(--colour-text-primary); border: 1px solid var(--colour-border); border-radius: 0.5rem; font-size: 0.9rem">
+        <button id="benny-send" class="btn btn--primary btn--sm">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results section -->
+<div class="container section--sm">
+  <div id="results" style="text-align: center; padding: 4rem 0; color: var(--colour-text-muted)">
+    <p style="font-size: 3rem">🐱</p>
+    <p style="margin-top: 1rem">Enter your income above and Benny will find you fairly-priced homes.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .afford-tag {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+  .afford-tag--good {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+  .afford-tag--ok {
+    background: rgba(249, 115, 22, 0.15);
+    color: var(--colour-orange);
+  }
+  .afford-tag--over {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .badge--verified {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+  .badge--flagged {
+    background: rgba(249, 115, 22, 0.15);
+    color: var(--colour-orange);
+  }
+  .badge--watchlist {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+  }
+  .badge--blacklisted {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+</style>
+
+<script>
+  const API = '';  // empty — same origin
+
+  async function search() {
+    const city = document.getElementById('city').value;
+    const income = document.getElementById('income').value;
+    const maxRent = document.getElementById('max-rent').value;
+    const beds = document.getElementById('bedrooms').value;
+
+    const params = new URLSearchParams({ city });
+    if (maxRent) params.set('max_rent', parseFloat(maxRent) * 100);
+    else if (income) params.set('max_rent', Math.floor((parseFloat(income)/12)*0.40*100));
+    if (beds !== '') params.set('min_bedrooms', beds);
+    if (income) params.set('annual_income', income);
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/listings/search?${params}`);
+      const data = await res.json();
+      renderListings(data.listings || [], city, income);
+    } catch (err) {
+      console.error('Search error:', err);
+      document.getElementById('results').innerHTML = '<div style="text-align:center;padding:4rem 0;color:var(--colour-text-muted)"><p style="font-size:3rem">🐱</p><p style="margin-top:1rem">Could not fetch listings. Please try again.</p></div>';
+    }
+    setLoading(false);
+  }
+
+  function setLoading(show) {
+    document.getElementById('search-btn').disabled = show;
+    if (show) document.getElementById('search-btn').textContent = 'Searching...';
+    else document.getElementById('search-btn').textContent = 'Search';
+  }
+
+  function calcMaxRent() {
+    const income = parseFloat(document.getElementById('income').value);
+    if (income) {
+      const max = Math.floor((income/12)*0.40);
+      document.getElementById('max-hint').textContent = `Max: £${max.toLocaleString()}/mo`;
+      document.getElementById('max-hint').style.display = 'block';
+    } else {
+      document.getElementById('max-hint').style.display = 'none';
+    }
+  }
+
+  function renderListings(listings, city, income) {
+    const area = document.getElementById('results');
+    if (!listings.length) {
+      area.innerHTML = '<div style="text-align:center;padding:4rem 0;color:var(--colour-text-muted)"><p style="font-size:3rem">🐱</p><p style="margin-top:1rem">No listings found. Try adjusting your filters, or ask Benny.</p></div>';
+      return;
+    }
+
+    const annualIncome = parseFloat(income) || 0;
+    const html = listings.map(l => {
+      const rent = (l.monthly_rent / 100).toFixed(0);
+      const pct = annualIncome ? ((l.monthly_rent/100) / (annualIncome/12) * 100).toFixed(0) : null;
+      const pctClass = pct < 33 ? 'afford-tag--good' : pct <= 40 ? 'afford-tag--ok' : 'afford-tag--over';
+      const agentStatus = l.agent?.status || 'unknown';
+      const badgeClass = agentStatus === 'blacklisted' ? 'badge--blacklisted' : agentStatus === 'flagged' ? 'badge--flagged' : agentStatus === 'watchlist' ? 'badge--watchlist' : 'badge--verified';
+
+      const blacklistedHeader = agentStatus === 'blacklisted'
+        ? '<div style="position:absolute;top:0;left:0;right:0;background:#ef4444;color:#fff;text-align:center;font-size:0.75rem;font-weight:700;padding:4px;border-radius:0.75rem 0.75rem 0 0">🚫 BLACKLISTED AGENT — HIDDEN FROM DEFAULT SEARCH</div><div style="margin-top:1.5rem"></div>'
+        : '';
+
+      return `<div class="card" style="position:relative">
+        ${blacklistedHeader}
+        <h3 style="font-size:1rem;color:var(--colour-text-primary);margin-bottom:0.5rem">${escapeHtml(l.title)}</h3>
+        <p style="font-size:1.5rem;font-weight:800;color:var(--colour-orange);margin-bottom:0.5rem">£${parseInt(rent).toLocaleString()}<span style="font-size:0.9rem;font-weight:400;color:var(--colour-text-muted)">/mo</span></p>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;font-size:0.9rem">
+          ${pct ? `<span class="afford-tag ${pctClass}">${pct}% of income</span>` : ''}
+          <span style="color:var(--colour-text-muted)">${l.bedrooms === 0 ? 'Studio' : l.bedrooms + ' bed'} · ${escapeHtml(l.city)}</span>
+          <span style="font-size:0.75rem;background:rgba(249,115,22,0.1);color:var(--colour-orange);padding:2px 8px;border-radius:4px">${escapeHtml(l.source)}</span>
+        </div>
+        ${l.agent ? `<div style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem"><span style="color:var(--colour-text-muted)">${escapeHtml(l.agent.name)}</span><span class="badge ${badgeClass}">${agentStatus}</span></div>` : ''}
+        ${l.url ? `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" class="btn btn--ghost btn--sm" style="margin-top:0.75rem">View Listing →</a>` : ''}
+      </div>`;
+    }).join('');
+
+    area.innerHTML = html;
+  }
+
+  function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return text.replace(/[&<>"']/g, m => map[m]);
+  }
+
+  // Benny chat
+  async function sendBenny() {
+    const input = document.getElementById('benny-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendBennyMsg('user', text);
+    input.value = '';
+    appendBennyMsg('typing', '🐱 Benny is thinking...');
+
+    try {
+      const res = await fetch('/api/benny/chat', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({messages:[{role:'user',content:text}]})
+      });
+      const data = await res.json();
+      removeTyping();
+      appendBennyMsg('assistant', data.content || data.message || 'Benny had a moment. Try again.');
+    } catch (err) {
+      console.error('Benny error:', err);
+      removeTyping();
+      appendBennyMsg('assistant', 'Sorry, Benny couldn\'t respond. Try again in a moment.');
+    }
+  }
+
+  function appendBennyMsg(role, text) {
+    const msgs = document.getElementById('benny-msgs');
+    const div = document.createElement('div');
+    div.className = 'benny-msg-' + role;
+    if (role === 'user') {
+      div.style.cssText = 'background:var(--colour-orange);color:#fff;padding:10px 14px;border-radius:12px 12px 2px 12px;max-width:70%;margin-left:auto;margin-bottom:8px;font-size:0.9rem;word-wrap:break-word';
+    } else {
+      div.style.cssText = 'background:var(--colour-bg-card);border-left:3px solid var(--colour-orange);padding:10px 14px;border-radius:0 12px 12px 12px;max-width:85%;margin-bottom:8px;font-size:0.9rem;color:var(--colour-text-secondary);word-wrap:break-word';
+    }
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTyping() {
+    document.querySelectorAll('.benny-msg-typing').forEach(el => el.remove());
+  }
+
+  // Event listeners
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('search-btn').addEventListener('click', search);
+    document.getElementById('income').addEventListener('input', calcMaxRent);
+    document.getElementById('benny-toggle').addEventListener('click', () => {
+      const box = document.getElementById('benny-box');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    });
+    document.getElementById('benny-send').addEventListener('click', sendBenny);
+    document.getElementById('benny-input').addEventListener('keydown', e => { if(e.key === 'Enter') sendBenny(); });
+  });
+</script>
+{% endblock %}

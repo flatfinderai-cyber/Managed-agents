@@ -1,0 +1,36 @@
+{
+  "version": "v1",
+  "layer1": {
+    "price_quarantine_below_market_ratio": 0.6,
+    "max_bedrooms": 10,
+    "required_fields": ["title", "url", "city", "price_local"]
+  },
+  "layer2": {
+    "block_phrases": [
+      "deposit before viewing",
+      "pay before viewing",
+      "wire transfer only",
+      "crypto only"
+    ],
+    "quarantine_phrases": [
+      "act now",
+      "limited time",
+      "contact me on whatsapp",
+      "email me directly",
+      "off platform"
+    ],
+    "vague_marketing_words": ["luxury", "premium", "exclusive", "upscale", "high-end"]
+  },
+  "layer3": {
+    "max_listings_per_source_city_per_run": 100,
+    "new_account_spike_threshold": 15
+  },
+  "layer4": {
+    "blocked_domains": ["tempmail", "mailinator"],
+    "high_risk_email_domains": ["protonmail", "tutanota"]
+  },
+  "layer5": {
+    "minimum_hold_minutes": 120,
+    "require_prior_pass_layers": true
+  }
+}
