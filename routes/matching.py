@@ -260,8 +260,14 @@ def _calculate_affordability(tenant: dict, listing: dict) -> Optional[float]:
 
 
 def _compliance_score(landlord: dict) -> float:
-    """Return landlord compliance score for ranking. Defaults to 0.0 if not present."""
-    return float(landlord.get("compliance_score") or 0.0)
+    score = 0.0
+    if landlord.get("kyc_verified"):
+        score += 0.3
+    if landlord.get("ownership_verified"):
+        score += 0.4
+    if landlord.get("history_verified"):
+        score += 0.3
+    return score
 
 
 # ---------------------------------------------------------------------------
