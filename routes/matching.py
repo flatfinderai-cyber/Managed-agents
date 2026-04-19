@@ -383,61 +383,81 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
     now = _now()
     upserted_matches = []
 
-    for rank_index, match in enumerate(passed_matches):
-        listing_id = match["listing_id"]
-
+    if passed_matches:
+        # Fetch existing match records in bulk
+        listing_ids = [m["listing_id"] for m in passed_matches]
         try:
-            existing = (
+            # Note: Max URL length or filter length might be an issue for thousands of listings.
+            # Using chunking if there are more than ~1000 items is safer, but typically
+            # a tenant will not match thousands of listings at once in a normal radius.
+            existing_query = (
                 _sb.table("matches")
-                .select("id, status")
+                .select("id, status, listing_id, created_at")
                 .eq("tenant_user_id", tenant_user_id)
-                .eq("listing_id", listing_id)
+                .in_("listing_id", listing_ids)
                 .execute()
             )
+            existing_map = {row["listing_id"]: row for row in existing_query.data} if existing_query.data else {}
         except Exception as exc:
             raise _db_error(exc)
 
-        match_record = {
-            "tenant_user_id": tenant_user_id,
-            "listing_id": listing_id,
-            "filter_results": match["filter_results"],
-            "affordability_pct": match["affordability_pct"],
-            "is_affordable": match["is_affordable"],
-            # rank is internal only — never exposed to landlord
-            "internal_rank": rank_index + 1,
-            "updated_at": now,
-        }
+        upsert_payload = []
+        # Keep track of match data to easily build the response format
+        payload_meta = {}
 
-        try:
-            if existing.data:
-                record_id = existing.data[0]["id"]
+        for rank_index, match in enumerate(passed_matches):
+            listing_id = match["listing_id"]
+            existing = existing_map.get(listing_id)
+
+            match_record = {
+                "tenant_user_id": tenant_user_id,
+                "listing_id": listing_id,
+                "filter_results": match["filter_results"],
+                "affordability_pct": match["affordability_pct"],
+                "is_affordable": match["is_affordable"],
+                # rank is internal only — never exposed to landlord
+                "internal_rank": rank_index + 1,
+                "updated_at": now,
+            }
+
+            if existing:
+                match_record["id"] = existing["id"]
+                match_record["created_at"] = existing.get("created_at") or now
                 # Do not overwrite a confirmed match status
-                if existing.data[0].get("status") not in ("confirmed_both",):
+                if existing.get("status") not in ("confirmed_both",):
                     match_record["status"] = "matched"
-                result = (
-                    _sb.table("matches")
-                    .update(match_record)
-                    .eq("id", record_id)
-                    .execute()
-                )
-                saved = result.data[0] if result.data else {**match_record, "id": record_id}
+                else:
+                    match_record["status"] = existing.get("status")
             else:
                 match_record["id"] = str(uuid.uuid4())
                 match_record["status"] = "matched"
                 match_record["created_at"] = now
-                result = _sb.table("matches").insert(match_record).execute()
-                saved = result.data[0] if result.data else match_record
+
+            upsert_payload.append(match_record)
+            payload_meta[match_record["id"]] = match
+
+        # Perform bulk upsert
+        try:
+            # Supabase Python client's .upsert() accepts a list of dicts.
+            result = _sb.table("matches").upsert(upsert_payload).execute()
+            saved_records = result.data or upsert_payload
         except Exception as exc:
             raise _db_error(exc)
 
-        upserted_matches.append({
-            "match_id": saved.get("id", match_record.get("id")),
-            "listing_id": listing_id,
-            "filter_results": match["filter_results"],
-            "affordability_pass": match["is_affordable"],
-            "listing_snapshot": match["listing_snapshot"],
-            # No rank, no tier, no score surfaced
-        })
+        for saved in saved_records:
+            match_id = saved.get("id")
+            original_match = payload_meta.get(match_id)
+            if not original_match:
+                continue
+
+            upserted_matches.append({
+                "match_id": match_id,
+                "listing_id": saved.get("listing_id"),
+                "filter_results": original_match["filter_results"],
+                "affordability_pass": original_match["is_affordable"],
+                "listing_snapshot": original_match["listing_snapshot"],
+                # No rank, no tier, no score surfaced
+            })
 
     return {
         "tenant_user_id": tenant_user_id,
