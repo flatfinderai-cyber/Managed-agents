@@ -17,6 +17,7 @@ import re
 import math
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from functools import lru_cache
 
 # ── Known filler fingerprints (FF-CORE-007 §4.6) ──────────────────────────────
 FILLER_PATTERNS = [
@@ -76,6 +77,16 @@ def check_dictionary_integrity(content: str) -> tuple[bool, float]:
     return pct >= 0.85, round(pct, 3)
 
 
+@lru_cache(maxsize=1024)
+def _get_context_words(context_items: tuple) -> frozenset:
+    """Caches the lowercased split words from listing context values."""
+    words = set()
+    for _, val in context_items:
+        if isinstance(val, str):
+            words.update(val.lower().split())
+    return frozenset(words)
+
+
 def check_semantic_coherence(content: str, listing_context: dict) -> tuple[bool, float]:
     """
     §4.4 — Semantic coherence >= 0.60 against listing context.
@@ -99,10 +110,15 @@ def check_semantic_coherence(content: str, listing_context: dict) -> tuple[bool,
     }
 
     # Add location-specific keywords from listing context
-    context_words = set()
-    for val in listing_context.values():
-        if isinstance(val, str):
-            context_words.update(val.lower().split())
+    # Convert dict items to a tuple so it's hashable for lru_cache
+    try:
+        context_words = _get_context_words(tuple(listing_context.items()))
+    except TypeError:
+        # Fallback if unhashable elements in values (e.g. nested lists)
+        context_words = set()
+        for val in listing_context.values():
+            if isinstance(val, str):
+                context_words.update(val.lower().split())
 
     all_relevant = rental_keywords | context_words
 
