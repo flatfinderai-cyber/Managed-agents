@@ -27,10 +27,11 @@ router = APIRouter(tags=["Landlord Verification"])
 # Supabase client
 # ---------------------------------------------------------------------------
 
-_sb = create_client(
+supabase = create_client(
     os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""),
     os.environ.get("SUPABASE_SERVICE_KEY", ""),
 )
+_sb = supabase # alias for the rest of the file
 
 # ---------------------------------------------------------------------------
 # Helper utilities
@@ -78,20 +79,11 @@ def _queue_human_review(
 
 
 def _get_profile(user_id: str) -> dict:
-    """Fetch landlord profile or raise 404."""
     try:
-        result = (
-            _sb.table("landlord_profiles")
-            .select("*")
-            .eq("user_id", user_id)
-            .single()
-            .execute()
-        )
+        res = supabase.table("landlord_profiles").select("*").eq("user_id", user_id).single().execute()
+        return res.data or {}
     except Exception as exc:
-        raise _db_error(exc)
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Landlord profile not found.")
-    return result.data
+        raise HTTPException(status_code=500, detail=f"Failed to load profile: {exc!s}")
 
 
 def _require_prior_form(profile: dict, required_status_field: str, form_number: int) -> None:
