@@ -1,11 +1,16 @@
+import sys
 import os
-import pytest
 from unittest.mock import patch
+import pytest
 
 # Mock required environment variables before importing modules that depend on them
 os.environ["SUPABASE_URL"] = "http://test.com"
-os.environ["SUPABASE_SERVICE_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+os.environ["SUPABASE_SERVICE_KEY"] = "mock_service_key" # Just needs to exist, we mock supabase
 os.environ["INTERNAL_API_KEY"] = "test_key"
+
+# Mock dependencies that attempt module-level initializations requiring valid credentials
+from unittest.mock import MagicMock
+sys.modules['supabase'] = MagicMock()
 
 from routes.search_blitz import _perplexity_model, DEFAULT_PERPLEXITY_MODEL
 
