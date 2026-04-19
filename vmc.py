@@ -85,11 +85,15 @@ def _get_listing_context(listing_id: str) -> dict:
 
 
 def _check_window_expiry(thread: dict) -> bool:
-    """Returns True if the 24-hour window has expired (auto-cancel trigger)."""
-    if not thread.get("window_expires_at"):
-        return False
-    expires = datetime.fromisoformat(thread["window_expires_at"].replace("Z", "+00:00"))
-    return datetime.now(timezone.utc) > expires
+    opened_at_str = thread.get("opened_at")
+    if not opened_at_str:
+        return True
+    try:
+        opened_at = datetime.fromisoformat(opened_at_str)
+        now = datetime.now(timezone.utc)
+        return (now - opened_at) > timedelta(hours=72)
+    except Exception:
+        return True
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
