@@ -519,9 +519,8 @@ async def get_matches_for_listing(listing_id: str, current: CurrentUserId):
     matches = result.data or []
 
     # Sanitise — strip any accidentally stored internal fields
-    landlord_safe = []
-    for m in matches:
-        landlord_safe.append({
+    landlord_safe = [
+        {
             "match_id": m.get("id"),
             "listing_id": m.get("listing_id"),
             "status": m.get("status"),
@@ -530,7 +529,9 @@ async def get_matches_for_listing(listing_id: str, current: CurrentUserId):
             "created_at": m.get("created_at"),
             # All that the landlord sees:
             "message": "A verified tenant has been matched to your listing.",
-        })
+        }
+        for m in matches
+    ]
 
     return {"listing_id": listing_id, "total": len(landlord_safe), "matches": landlord_safe}
 
