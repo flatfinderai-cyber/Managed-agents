@@ -27,7 +27,7 @@ class AgentReport(BaseModel):
 
 
 @router.get("/search")
-async def search_agents(
+def search_agents(
     name: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -54,7 +54,7 @@ async def search_agents(
 
 
 @router.get("/{agent_id}")
-async def get_agent(agent_id: str):
+def get_agent(agent_id: str):
     """Get full agent profile including violations."""
     agent = supabase.table("agents").select("*").eq("id", agent_id).single().execute()
     if not agent.data:
@@ -71,7 +71,7 @@ async def get_agent(agent_id: str):
 
 
 @router.get("/{agent_id}/compliance")
-async def get_agent_compliance(agent_id: str):
+def get_agent_compliance(agent_id: str):
     """Returns compliance score and recommendation for an agent."""
     agent = supabase.table("agents").select(
         "compliance_score, status, is_blacklisted, blacklist_reason, "
@@ -103,7 +103,7 @@ async def get_agent_compliance(agent_id: str):
 
 
 @router.post("/report")
-async def report_agent(report: AgentReport):
+def report_agent(report: AgentReport):
     """Submit a community report against an agent."""
     if not report.violation_type or not report.description:
         raise HTTPException(status_code=400, detail="violation_type and description are required")
@@ -130,7 +130,7 @@ async def report_agent(report: AgentReport):
 
 
 @router.get("/blacklist/all")
-async def get_full_blacklist(city: Optional[str] = Query(None)):
+def get_full_blacklist(city: Optional[str] = Query(None)):
     """Returns all blacklisted agents, optionally filtered by city."""
     query = supabase.table("agents").select(
         "id, name, company, city, cities_active, blacklist_reason, blacklist_date, "
