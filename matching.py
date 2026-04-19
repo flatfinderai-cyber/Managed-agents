@@ -62,7 +62,9 @@ def _parse_date(value: Optional[str]) -> Optional[date]:
 
 
 def _months_between(d1: date, d2: date) -> float:
-    return (d2.year - d1.year) * 12 + (d2.month - d1.month)
+    # Approximate months between two dates
+    days = (d2 - d1).days
+    return days / 30.44
 
 
 def _match_tenant_id(m: dict) -> Optional[str]:
