@@ -47,6 +47,102 @@ Rules you must enforce:
 Output: structured recommendations + any SQL you generate.
 """
 
+_TOOLS = [
+    {
+        "name": "list_migrations",
+        "description": (
+            "List all existing migration files in the supabase/migrations directory, "
+            "sorted by filename (which is chronological order)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "read_migration",
+        "description": "Read the full SQL content of a specific migration file.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "Exact filename, e.g. '20260327_001_initial_schema.sql'",
+                }
+            },
+            "required": ["filename"],
+        },
+    },
+    {
+        "name": "validate_sql",
+        "description": (
+            "Validate SQL syntax by checking for common issues: "
+            "unmatched parentheses, missing semicolons, reserved-word collisions. "
+            "Does NOT execute against the database."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sql": {
+                    "type": "string",
+                    "description": "The SQL to validate.",
+                }
+            },
+            "required": ["sql"],
+        },
+    },
+    {
+        "name": "check_rls_coverage",
+        "description": (
+            "Analyse a migration SQL string and return which tables are missing "
+            "Row Level Security (RLS) ENABLE and policy definitions."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sql": {
+                    "type": "string",
+                    "description": "Full schema SQL to analyse.",
+                }
+            },
+            "required": ["sql"],
+        },
+    },
+    {
+        "name": "save_migration",
+        "description": (
+            "Save a new SQL migration file. "
+            "The filename is auto-generated from the description and next sequence number."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "description": "Short snake_case description, e.g. 'add_rls_policies'",
+                },
+                "sql": {
+                    "type": "string",
+                    "description": "Full SQL content for the migration.",
+                },
+            },
+            "required": ["description", "sql"],
+        },
+    },
+    {
+        "name": "list_tables_in_sql",
+        "description": "Extract and list all table names defined in a SQL string.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sql": {"type": "string"},
+            },
+            "required": ["sql"],
+        },
+    },
+]
+
 
 class DatabaseArchitectAgent(BaseAgent):
     """
@@ -59,101 +155,7 @@ class DatabaseArchitectAgent(BaseAgent):
 
     @property
     def tools(self) -> list[dict]:
-        return [
-            {
-                "name": "list_migrations",
-                "description": (
-                    "List all existing migration files in the supabase/migrations directory, "
-                    "sorted by filename (which is chronological order)."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
-            },
-            {
-                "name": "read_migration",
-                "description": "Read the full SQL content of a specific migration file.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "filename": {
-                            "type": "string",
-                            "description": "Exact filename, e.g. '20260327_001_initial_schema.sql'",
-                        }
-                    },
-                    "required": ["filename"],
-                },
-            },
-            {
-                "name": "validate_sql",
-                "description": (
-                    "Validate SQL syntax by checking for common issues: "
-                    "unmatched parentheses, missing semicolons, reserved-word collisions. "
-                    "Does NOT execute against the database."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "sql": {
-                            "type": "string",
-                            "description": "The SQL to validate.",
-                        }
-                    },
-                    "required": ["sql"],
-                },
-            },
-            {
-                "name": "check_rls_coverage",
-                "description": (
-                    "Analyse a migration SQL string and return which tables are missing "
-                    "Row Level Security (RLS) ENABLE and policy definitions."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "sql": {
-                            "type": "string",
-                            "description": "Full schema SQL to analyse.",
-                        }
-                    },
-                    "required": ["sql"],
-                },
-            },
-            {
-                "name": "save_migration",
-                "description": (
-                    "Save a new SQL migration file. "
-                    "The filename is auto-generated from the description and next sequence number."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "description": {
-                            "type": "string",
-                            "description": "Short snake_case description, e.g. 'add_rls_policies'",
-                        },
-                        "sql": {
-                            "type": "string",
-                            "description": "Full SQL content for the migration.",
-                        },
-                    },
-                    "required": ["description", "sql"],
-                },
-            },
-            {
-                "name": "list_tables_in_sql",
-                "description": "Extract and list all table names defined in a SQL string.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "sql": {"type": "string"},
-                    },
-                    "required": ["sql"],
-                },
-            },
-        ]
+        return _TOOLS
 
     # ── Tool implementations ──────────────────────────────────────────────────
 
