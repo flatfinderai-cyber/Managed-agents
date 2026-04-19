@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import itertools
 from pathlib import Path
 from typing import Any
 
@@ -392,7 +393,7 @@ class ScraperAgent(BaseAgent):
 
         url = cities[city][f"{source}_url"]
         listings = asyncio.run(fn(city, url))
-        listing_dicts = [vars(lst) for lst in listings[:max_listings]]
+        listing_dicts = [vars(lst) for lst in itertools.islice(listings, max_listings)]
 
         return {
             "listings": listing_dicts,
