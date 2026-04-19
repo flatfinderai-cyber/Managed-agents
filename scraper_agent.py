@@ -50,6 +50,124 @@ Use British/Canadian English throughout. Never use Americanised filler language.
 Always report final statistics in a clean summary table.
 """
 
+_TOOLS = [
+    {
+        "name": "list_available_cities",
+        "description": "Return the list of cities and sources the scraper supports.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "run_scraper",
+        "description": (
+            "Run the Playwright scraper for a given city and source. "
+            "Returns the raw listings scraped. In dry-run mode (no env vars), "
+            "returns synthetic test data."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "description": "City name, e.g. 'Toronto'",
+                },
+                "source": {
+                    "type": "string",
+                    "enum": ["kijiji", "craigslist", "gumtree", "leboncoin"],
+                    "description": "Scraper source to use.",
+                },
+                "max_listings": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Maximum listings to scrape (use small number for tests).",
+                },
+            },
+            "required": ["city", "source"],
+        },
+    },
+    {
+        "name": "score_listing_quality",
+        "description": (
+            "Score a single listing's quality 0-100 based on completeness. "
+            "Flags missing photos, description, address, price."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "listing": {
+                    "type": "object",
+                    "description": "Listing dict with fields: title, description, images, address, bedrooms, price_local.",
+                }
+            },
+            "required": ["listing"],
+        },
+    },
+    {
+        "name": "check_scam_signals",
+        "description": (
+            "Run heuristic scam detection on a listing. "
+            "Checks for scam keywords, too-low price, USD currency, missing contact."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "listing": {"type": "object"},
+                "city": {"type": "string"},
+            },
+            "required": ["listing", "city"],
+        },
+    },
+    {
+        "name": "batch_score_and_flag",
+        "description": (
+            "Score quality and check scam signals for a list of listings. "
+            "Returns statistics and the annotated listings sorted by quality score."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "listings": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                },
+                "city": {"type": "string"},
+            },
+            "required": ["listings", "city"],
+        },
+    },
+    {
+        "name": "get_city_median_rents",
+        "description": "Return the known median rents by bedroom count for a given city.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "city": {"type": "string"},
+            },
+            "required": ["city"],
+        },
+    },
+    {
+        "name": "deduplicate_listings",
+        "description": (
+            "Remove duplicate listings from a list by comparing title + price. "
+            "Returns the deduplicated list and count of removed duplicates."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "listings": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                },
+            },
+            "required": ["listings"],
+        },
+    },
+]
+
 
 # ── Scam detection heuristics (pure Python, no API calls) ─────────────────────
 
@@ -155,123 +273,7 @@ class ScraperAgent(BaseAgent):
 
     @property
     def tools(self) -> list[dict]:
-        return [
-            {
-                "name": "list_available_cities",
-                "description": "Return the list of cities and sources the scraper supports.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
-            },
-            {
-                "name": "run_scraper",
-                "description": (
-                    "Run the Playwright scraper for a given city and source. "
-                    "Returns the raw listings scraped. In dry-run mode (no env vars), "
-                    "returns synthetic test data."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "city": {
-                            "type": "string",
-                            "description": "City name, e.g. 'Toronto'",
-                        },
-                        "source": {
-                            "type": "string",
-                            "enum": ["kijiji", "craigslist", "gumtree", "leboncoin"],
-                            "description": "Scraper source to use.",
-                        },
-                        "max_listings": {
-                            "type": "integer",
-                            "default": 20,
-                            "description": "Maximum listings to scrape (use small number for tests).",
-                        },
-                    },
-                    "required": ["city", "source"],
-                },
-            },
-            {
-                "name": "score_listing_quality",
-                "description": (
-                    "Score a single listing's quality 0-100 based on completeness. "
-                    "Flags missing photos, description, address, price."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "listing": {
-                            "type": "object",
-                            "description": "Listing dict with fields: title, description, images, address, bedrooms, price_local.",
-                        }
-                    },
-                    "required": ["listing"],
-                },
-            },
-            {
-                "name": "check_scam_signals",
-                "description": (
-                    "Run heuristic scam detection on a listing. "
-                    "Checks for scam keywords, too-low price, USD currency, missing contact."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "listing": {"type": "object"},
-                        "city": {"type": "string"},
-                    },
-                    "required": ["listing", "city"],
-                },
-            },
-            {
-                "name": "batch_score_and_flag",
-                "description": (
-                    "Score quality and check scam signals for a list of listings. "
-                    "Returns statistics and the annotated listings sorted by quality score."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "listings": {
-                            "type": "array",
-                            "items": {"type": "object"},
-                        },
-                        "city": {"type": "string"},
-                    },
-                    "required": ["listings", "city"],
-                },
-            },
-            {
-                "name": "get_city_median_rents",
-                "description": "Return the known median rents by bedroom count for a given city.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "city": {"type": "string"},
-                    },
-                    "required": ["city"],
-                },
-            },
-            {
-                "name": "deduplicate_listings",
-                "description": (
-                    "Remove duplicate listings from a list by comparing title + price. "
-                    "Returns the deduplicated list and count of removed duplicates."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "listings": {
-                            "type": "array",
-                            "items": {"type": "object"},
-                        },
-                    },
-                    "required": ["listings"],
-                },
-            },
-        ]
+        return _TOOLS
 
     # ── Tool implementations ──────────────────────────────────────────────────
 

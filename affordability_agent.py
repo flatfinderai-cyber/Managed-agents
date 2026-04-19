@@ -55,6 +55,143 @@ Key facts to communicate clearly:
 - Savings of 6-12 months rent are a valid alternative qualification method.
 """
 
+_TOOLS = [
+    {
+        "name": "calculate_affordability",
+        "description": (
+            "Calculate what percentage of a tenant's monthly income goes to rent. "
+            "Returns is_affordable (True if ≤ 40%), pct_of_income, max_rent_cad."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "annual_income": {
+                    "type": "number",
+                    "description": "Gross annual income in CAD (or relevant currency).",
+                },
+                "monthly_rent": {
+                    "type": "number",
+                    "description": "Monthly rent in CAD.",
+                },
+            },
+            "required": ["annual_income", "monthly_rent"],
+        },
+    },
+    {
+        "name": "get_max_rent",
+        "description": (
+            "Returns the maximum monthly rent a person can safely afford "
+            "at the 40% income threshold."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "annual_income": {
+                    "type": "number",
+                    "description": "Gross annual income in CAD.",
+                },
+            },
+            "required": ["annual_income"],
+        },
+    },
+    {
+        "name": "affordability_summary",
+        "description": (
+            "Full affordability summary for a given income + rent pair. "
+            "Returns status label, pct_of_income, max_affordable_rent, and a plain-English label."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "annual_income": {"type": "number"},
+                "monthly_rent": {"type": "number"},
+            },
+            "required": ["annual_income", "monthly_rent"],
+        },
+    },
+    {
+        "name": "flag_illegal_screening",
+        "description": (
+            "Check whether a letting agent's income requirement is predatory. "
+            "Returns is_illegal, multiplier_used, and a plain-English explanation."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "monthly_rent": {
+                    "type": "number",
+                    "description": "Listed monthly rent in CAD.",
+                },
+                "required_monthly_income": {
+                    "type": "number",
+                    "description": "Income the agent claims the tenant must earn monthly.",
+                },
+            },
+            "required": ["monthly_rent", "required_monthly_income"],
+        },
+    },
+    {
+        "name": "batch_affordability_check",
+        "description": (
+            "Check affordability for a list of listings against a single income. "
+            "Returns each listing annotated with its affordability result."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "annual_income": {"type": "number"},
+                "listings": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "title": {"type": "string"},
+                            "monthly_rent": {"type": "number"},
+                        },
+                        "required": ["monthly_rent"],
+                    },
+                    "description": "List of listings with their monthly_rent.",
+                },
+            },
+            "required": ["annual_income", "listings"],
+        },
+    },
+    {
+        "name": "get_rule_explanation",
+        "description": (
+            "Return a comprehensive plain-English explanation of the 33-40% rule "
+            "vs the 3× multiplier, with numbers. Use for Benny chat responses."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "example_rent": {
+                    "type": "number",
+                    "description": "Monthly rent to use in the concrete example (optional).",
+                    "default": 2400,
+                }
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "savings_qualification",
+        "description": (
+            "Calculate whether a tenant qualifies via the savings route "
+            "(6 months rent in savings = acceptable alternative to income requirement)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "monthly_rent": {"type": "number"},
+                "savings_cad": {"type": "number"},
+            },
+            "required": ["monthly_rent", "savings_cad"],
+        },
+    },
+]
+
 
 class AffordabilityAgent(BaseAgent):
     """
@@ -67,142 +204,7 @@ class AffordabilityAgent(BaseAgent):
 
     @property
     def tools(self) -> list[dict]:
-        return [
-            {
-                "name": "calculate_affordability",
-                "description": (
-                    "Calculate what percentage of a tenant's monthly income goes to rent. "
-                    "Returns is_affordable (True if ≤ 40%), pct_of_income, max_rent_cad."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "annual_income": {
-                            "type": "number",
-                            "description": "Gross annual income in CAD (or relevant currency).",
-                        },
-                        "monthly_rent": {
-                            "type": "number",
-                            "description": "Monthly rent in CAD.",
-                        },
-                    },
-                    "required": ["annual_income", "monthly_rent"],
-                },
-            },
-            {
-                "name": "get_max_rent",
-                "description": (
-                    "Returns the maximum monthly rent a person can safely afford "
-                    "at the 40% income threshold."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "annual_income": {
-                            "type": "number",
-                            "description": "Gross annual income in CAD.",
-                        },
-                    },
-                    "required": ["annual_income"],
-                },
-            },
-            {
-                "name": "affordability_summary",
-                "description": (
-                    "Full affordability summary for a given income + rent pair. "
-                    "Returns status label, pct_of_income, max_affordable_rent, and a plain-English label."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "annual_income": {"type": "number"},
-                        "monthly_rent": {"type": "number"},
-                    },
-                    "required": ["annual_income", "monthly_rent"],
-                },
-            },
-            {
-                "name": "flag_illegal_screening",
-                "description": (
-                    "Check whether a letting agent's income requirement is predatory. "
-                    "Returns is_illegal, multiplier_used, and a plain-English explanation."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "monthly_rent": {
-                            "type": "number",
-                            "description": "Listed monthly rent in CAD.",
-                        },
-                        "required_monthly_income": {
-                            "type": "number",
-                            "description": "Income the agent claims the tenant must earn monthly.",
-                        },
-                    },
-                    "required": ["monthly_rent", "required_monthly_income"],
-                },
-            },
-            {
-                "name": "batch_affordability_check",
-                "description": (
-                    "Check affordability for a list of listings against a single income. "
-                    "Returns each listing annotated with its affordability result."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "annual_income": {"type": "number"},
-                        "listings": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "string"},
-                                    "title": {"type": "string"},
-                                    "monthly_rent": {"type": "number"},
-                                },
-                                "required": ["monthly_rent"],
-                            },
-                            "description": "List of listings with their monthly_rent.",
-                        },
-                    },
-                    "required": ["annual_income", "listings"],
-                },
-            },
-            {
-                "name": "get_rule_explanation",
-                "description": (
-                    "Return a comprehensive plain-English explanation of the 33-40% rule "
-                    "vs the 3× multiplier, with numbers. Use for Benny chat responses."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "example_rent": {
-                            "type": "number",
-                            "description": "Monthly rent to use in the concrete example (optional).",
-                            "default": 2400,
-                        }
-                    },
-                    "required": [],
-                },
-            },
-            {
-                "name": "savings_qualification",
-                "description": (
-                    "Calculate whether a tenant qualifies via the savings route "
-                    "(6 months rent in savings = acceptable alternative to income requirement)."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "monthly_rent": {"type": "number"},
-                        "savings_cad": {"type": "number"},
-                    },
-                    "required": ["monthly_rent", "savings_cad"],
-                },
-            },
-        ]
+        return _TOOLS
 
     # ── Tool implementations ──────────────────────────────────────────────────
 
