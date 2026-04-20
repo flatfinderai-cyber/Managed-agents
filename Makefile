@@ -20,7 +20,7 @@ build:
 
 test: pytests
 
-pytests: test-affordability test-compliance test-scraper
+pytests: test-affordability test-compliance test-scraper test-search-blitz
 
 test-affordability:
 	cd packages/affordability && python3 -m pytest test_engine.py -v
@@ -42,3 +42,5 @@ frontend:
 
 backend:
 	cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+test-search-blitz:
+	PYTHONPATH=. python3 -m pytest tests/test_search_blitz.py -v
