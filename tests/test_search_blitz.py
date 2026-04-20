@@ -4,9 +4,9 @@ from unittest.mock import patch
 import pytest
 
 # Mock required environment variables before importing modules that depend on them
-os.environ["SUPABASE_URL"] = "http://test.com"
-os.environ["SUPABASE_SERVICE_KEY"] = "mock_service_key" # Just needs to exist, we mock supabase
-os.environ["INTERNAL_API_KEY"] = "test_key"
+os.environ["SUPABASE_URL"] = "https://example.com"
+os.environ["SUPABASE_SERVICE_KEY"] = "dummy-key-for-testing"
+os.environ["INTERNAL_API_KEY"] = "dummy-api-key"
 
 # Mock dependencies that attempt module-level initializations requiring valid credentials
 from unittest.mock import MagicMock
