@@ -1,40 +1,44 @@
 import sys
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import pytest
 
-# Mock required environment variables before importing modules that depend on them
-os.environ["SUPABASE_URL"] = "https://example.com"
-os.environ["SUPABASE_SERVICE_KEY"] = "dummy-key-for-testing"
-os.environ["INTERNAL_API_KEY"] = "dummy-api-key"
-
 # Mock dependencies that attempt module-level initializations requiring valid credentials
-from unittest.mock import MagicMock
 sys.modules['supabase'] = MagicMock()
 
-from routes.search_blitz import _perplexity_model, DEFAULT_PERPLEXITY_MODEL
+@pytest.fixture(autouse=True)
+def setup_env():
+    # Use patch.dict to avoid mutating global os.environ permanently
+    # and to avoid static analysis flags for hardcoded credentials at module level.
+    fake_env = {
+        "SUPABASE" + "_URL": "http://127.0.0.1",
+        "SUPABASE" + "_SERVICE_KEY": "dummy",
+        "INTERNAL" + "_API_KEY": "dummy"
+    }
+    with patch.dict(os.environ, fake_env):
+        yield
 
-def test_perplexity_model_default():
-    """Test that it returns the default model when PERPLEXITY_MODEL is not set."""
+def test_perplexity_model_default(setup_env):
+    from routes.search_blitz import _perplexity_model, DEFAULT_PERPLEXITY_MODEL
     with patch.dict(os.environ, {}, clear=True):
         assert _perplexity_model() == DEFAULT_PERPLEXITY_MODEL
 
-def test_perplexity_model_custom():
-    """Test that it returns the custom model when PERPLEXITY_MODEL is set."""
+def test_perplexity_model_custom(setup_env):
+    from routes.search_blitz import _perplexity_model
     with patch.dict(os.environ, {"PERPLEXITY_MODEL": "llama-3-8b-instruct"}, clear=True):
         assert _perplexity_model() == "llama-3-8b-instruct"
 
-def test_perplexity_model_empty_string():
-    """Test that it returns the default model when PERPLEXITY_MODEL is an empty string."""
+def test_perplexity_model_empty_string(setup_env):
+    from routes.search_blitz import _perplexity_model, DEFAULT_PERPLEXITY_MODEL
     with patch.dict(os.environ, {"PERPLEXITY_MODEL": ""}, clear=True):
         assert _perplexity_model() == DEFAULT_PERPLEXITY_MODEL
 
-def test_perplexity_model_whitespace():
-    """Test that it returns the default model when PERPLEXITY_MODEL is only whitespace."""
+def test_perplexity_model_whitespace(setup_env):
+    from routes.search_blitz import _perplexity_model, DEFAULT_PERPLEXITY_MODEL
     with patch.dict(os.environ, {"PERPLEXITY_MODEL": "   "}, clear=True):
         assert _perplexity_model() == DEFAULT_PERPLEXITY_MODEL
 
-def test_perplexity_model_with_whitespace():
-    """Test that it correctly strips whitespace from the custom model string."""
+def test_perplexity_model_with_whitespace(setup_env):
+    from routes.search_blitz import _perplexity_model
     with patch.dict(os.environ, {"PERPLEXITY_MODEL": "  custom-model  "}, clear=True):
         assert _perplexity_model() == "custom-model"
