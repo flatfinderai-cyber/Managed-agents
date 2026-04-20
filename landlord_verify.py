@@ -95,15 +95,11 @@ def _get_profile(user_id: str) -> dict:
 
 
 def _require_prior_form(profile: dict, required_status_field: str, form_number: int) -> None:
-    """Raise 409 if the preceding form has not been verified."""
     status = profile.get(required_status_field)
-    if status != "verified":
+    if status != "approved":
         raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Form {form_number - 1} must be verified before submitting Form {form_number}. "
-                f"Current status of Form {form_number - 1}: '{status or 'pending'}'."
-            ),
+            status_code=400,
+            detail=f"Cannot submit Form {form_number}. Prior form ({required_status_field}) is not approved.",
         )
 
 
