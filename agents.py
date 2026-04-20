@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, List
 import os
+import asyncio
 from supabase import create_client
 
 router = APIRouter()
@@ -73,10 +74,11 @@ async def get_agent(agent_id: str):
 @router.get("/{agent_id}/compliance")
 async def get_agent_compliance(agent_id: str):
     """Returns compliance score and recommendation for an agent."""
-    agent = supabase.table("agents").select(
+    query = supabase.table("agents").select(
         "compliance_score, status, is_blacklisted, blacklist_reason, "
         "human_rights_flags, income_requirement_multiplier, uses_illegal_screening"
-    ).eq("id", agent_id).single().execute()
+    ).eq("id", agent_id).single()
+    agent = await asyncio.to_thread(query.execute)
 
     if not agent.data:
         raise HTTPException(status_code=404, detail="Agent not found")
