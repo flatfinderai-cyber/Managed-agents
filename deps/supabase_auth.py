@@ -47,7 +47,7 @@ async def bearer_user_id(
     """
     Require `Authorization: Bearer <access_token>` and return auth.users id (`sub`).
     """
-    if not authorization or not authorization.lower().startswith("Bearer "):
+    if not authorization or authorization[:7].lower() != "bearer ":
         raise HTTPException(
             status_code=401,
             detail="Missing or invalid Authorization header (expected Bearer token).",

@@ -2,6 +2,7 @@
 # FlatFinder™ — Backend API Entry Point
 # Trademarks and Patents Pending (CIPO). Proprietary and Confidential.
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -11,6 +12,12 @@ from dotenv import load_dotenv
 # ── Load environment ───────────────────────────────────────────────────────────
 load_dotenv(".env.local")
 load_dotenv(".env")
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("flatfinder")
 
 # ── Route imports ──────────────────────────────────────────────────────────────
 from routes.listings       import router as listings_router
@@ -29,9 +36,9 @@ from routes.orchestrator import router as orchestrator_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("FlatFinder™ API starting — © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin")
+    logger.info("FlatFinder™ API starting — © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin")
     yield
-    print("FlatFinder™ API shutting down.")
+    logger.info("FlatFinder™ API shutting down.")
 
 
 app = FastAPI(
@@ -48,13 +55,21 @@ app = FastAPI(
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# Allow explicit production origins via CORS_ALLOWED_ORIGINS (comma-separated),
+# falling back to NEXT_PUBLIC_APP_URL plus local dev defaults.
+_cors_env = (os.getenv("CORS_ALLOWED_ORIGINS") or "").strip()
+if _cors_env:
+    _cors_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+else:
+    _cors_origins = [
         os.getenv("NEXT_PUBLIC_APP_URL", "http://localhost:3000"),
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-    ],
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
