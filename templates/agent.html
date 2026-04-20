@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ agent.name }} — FlatFinder™{% endblock %}
+
+{% block content %}
+<!-- © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™: Housing Revolutionised™ -->
+<div class="container" style="padding-top:3rem">
+  <!-- Back Link -->
+  <a href="/wall-of-shame" style="color:var(--colour-text-muted);font-size:0.85rem;text-decoration:none;display:inline-block;margin-bottom:2rem">← Back to Wall of Shame</a>
+
+  <!-- Header Card -->
+  <div style="display:flex;flex-wrap:wrap;gap:2rem;margin-bottom:3rem;align-items:flex-start">
+    <!-- Left Column: Agent Info -->
+    <div style="flex:1;min-width:250px">
+      <h1 style="font-size:clamp(1.75rem,5vw,2.5rem);margin-bottom:0.5rem">{{ agent.name }}</h1>
+      <p style="color:var(--colour-text-muted);font-size:1rem;margin-bottom:1rem">{{ agent.company }}</p>
+
+      <!-- Country Flag -->
+      {% set flag_map = {'CA': '🇨🇦', 'GB': '🇬🇧', 'FR': '🇫🇷', 'SE': '🇸🇪', 'CH': '🇨🇭'} %}
+      {% if agent.country_code in flag_map %}
+        <p style="font-size:2rem;margin-bottom:1rem">{{ flag_map[agent.country_code] }}</p>
+      {% endif %}
+
+      <!-- Cities -->
+      {% if agent.cities_active %}
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+          {% for city in agent.cities_active %}
+            <span style="background:var(--bg-secondary);color:var(--colour-accent);padding:4px 12px;border-radius:4px;font-size:0.9rem">{{ city }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Right Column: Score -->
+    <div style="flex:0 0 auto;text-align:center;padding:2rem;background:var(--bg-secondary);border-radius:8px;min-width:200px">
+      <p style="font-size:3rem;font-weight:700;color:{% if agent.compliance_score < 30 %}#ef4444{% elif agent.compliance_score < 60 %}#f59e0b{% else %}#22c55e{% endif %};margin:0">{{ "%.0f"|format(agent.compliance_score) }}</p>
+      <p style="color:var(--colour-text-muted);font-size:0.9rem;margin-top:0.5rem">Compliance Score</p>
+      <span class="badge" style="display:inline-block;margin-top:1rem;{% if agent.is_blacklisted %}background:#ef4444;color:#fff{% elif agent.is_watchlist %}background:#f59e0b;color:#fff{% elif agent.is_flagged %}background:#3b82f6;color:#fff{% endif %}">
+        {% if agent.is_blacklisted %}🚫 Blacklisted{% elif agent.is_watchlist %}🔍 Watchlist{% elif agent.is_flagged %}⚠️ Flagged{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Blacklist Banner -->
+  {% if agent.is_blacklisted %}
+    <div class="card" style="background:rgba(239,68,68,0.08);border-left:4px solid #ef4444;margin-bottom:3rem">
+      <h2 style="color:#ef4444;margin-bottom:1rem">⚖️ Why They're Blacklisted</h2>
+      <p style="color:var(--colour-text-secondary);line-height:1.6">{{ agent.blacklist_reason }}</p>
+    </div>
+  {% endif %}
+
+  <!-- Violations Section -->
+  <div style="margin-bottom:3rem">
+    <h2 style="margin-bottom:1.5rem">Documented Violations</h2>
+    {% if violations %}
+      <div style="display:grid;gap:1rem">
+        {% for violation in violations %}
+          <div class="card" style="border-left:4px solid {% if violation.severity == 'critical' %}#ef4444{% elif violation.severity == 'high' %}#f59e0b{% else %}#eab308{% endif %}">
+            <div style="display:flex;flex-wrap:wrap;align-items:start;gap:1rem;margin-bottom:0.75rem">
+              <h3 style="margin:0;flex:1;min-width:200px">{{ violation.type.replace('_', ' ').title() }}</h3>
+              <span class="badge" style="{% if violation.severity == 'critical' %}background:#ef4444;color:#fff{% elif violation.severity == 'high' %}background:#f59e0b;color:#fff{% else %}background:#eab308;color:#000{% endif %}">
+                {{ violation.severity.upper() }}
+              </span>
+              {% if violation.verified %}
+                <span style="color:#22c55e;font-size:0.9rem">✓ Verified</span>
+              {% else %}
+                <span style="color:var(--colour-text-muted);font-size:0.9rem">Pending Verification</span>
+              {% endif %}
+            </div>
+            <p style="color:var(--colour-text-secondary);margin:0.5rem 0">{{ violation.description }}</p>
+            {% if violation.financial_harm %}
+              <p style="color:#ef4444;font-weight:600;margin-top:0.75rem">Financial Harm: £{{ violation.financial_harm|int }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--colour-text-muted)">No verified violations on record.</p>
+    {% endif %}
+  </div>
+
+  <!-- Agent Notes -->
+  {% if agent.notes %}
+    <div style="margin-bottom:3rem">
+      <h3 style="margin-bottom:1rem">Context</h3>
+      <p style="color:var(--colour-text-secondary);line-height:1.6">{{ agent.notes }}</p>
+    </div>
+  {% endif %}
+
+  <!-- Report CTA -->
+  <div class="card" style="background:var(--bg-secondary);border:2px solid var(--colour-accent);text-align:center;padding:2rem">
+    <h3 style="margin-bottom:0.5rem">🐱 Something missing?</h3>
+    <p style="color:var(--colour-text-secondary);margin-bottom:1.5rem">Report additional information about this agent to our community.</p>
+    <a href="/beta" class="btn btn--primary">Report This Agent</a>
+  </div>
+</div>
+{% endblock %}

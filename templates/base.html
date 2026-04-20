@@ -1,0 +1,72 @@
+<!-- © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™: Housing Revolutionised™ -->
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}FlatFinder™: Housing Revolutionised™{% endblock %}</title>
+  <meta name="description" content="{% block description %}Anti-gatekeeping rental platform. Economist-backed affordability. Canadian Kind, Scottish Strong.{% endblock %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/globals.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav__inner container">
+      <a href="/" class="nav__logo">🐱 <span>FlatFinder™</span></a>
+      <ul class="nav__links">
+        <li><a href="/search" {% if request.url.path == '/search' %}style="color:var(--colour-orange)"{% endif %}>Search</a></li>
+        <li><a href="/wall-of-shame" {% if request.url.path == '/wall-of-shame' %}style="color:var(--colour-orange)"{% endif %}>Wall of Shame</a></li>
+        <li><a href="/affordability" {% if request.url.path == '/affordability' %}style="color:var(--colour-orange)"{% endif %}>Affordability</a></li>
+        <li><a href="/demands" {% if request.url.path == '/demands' %}style="color:var(--colour-orange)"{% endif %}>Renter Demands</a></li>
+        <li><a href="/beta" style="color:var(--colour-orange);font-weight:700">Join Beta</a></li>
+      </ul>
+      <!-- Mobile menu button -->
+      <button id="nav-toggle" class="btn btn--ghost btn--sm" style="display:none" aria-label="Menu">☰</button>
+    </div>
+  </nav>
+
+  <!-- MOBILE NAV DRAWER -->
+  <div id="nav-drawer" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:200;padding:2rem;flex-direction:column;gap:1.5rem">
+    <button id="nav-close" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:#f9fafb;font-size:1.5rem;cursor:pointer">✕</button>
+    <a href="/" style="color:#f9fafb;font-size:1.2rem;font-weight:700;text-decoration:none">🐱 FlatFinder™</a>
+    <a href="/search" style="color:#9ca3af;font-size:1rem;text-decoration:none">Search Listings</a>
+    <a href="/wall-of-shame" style="color:#9ca3af;font-size:1rem;text-decoration:none">Wall of Shame</a>
+    <a href="/affordability" style="color:#9ca3af;font-size:1rem;text-decoration:none">Affordability Calculator</a>
+    <a href="/demands" style="color:#9ca3af;font-size:1rem;text-decoration:none">Renter Demands</a>
+    <a href="/beta" style="color:#f97316;font-size:1rem;font-weight:700;text-decoration:none">Join the Beta →</a>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <p class="footer__copy">
+        © 2024–2026 <strong>Lila Alexandra Olufemi Inglis Abegunrin</strong>. All Rights Reserved.
+        FlatFinder™: Housing Revolutionised™ | Canadian Kind, Scottish Strong.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Mobile nav script -->
+  <script>
+    const toggle = document.getElementById('nav-toggle');
+    const drawer = document.getElementById('nav-drawer');
+    const close  = document.getElementById('nav-close');
+    const mq = window.matchMedia('(max-width: 768px)');
+    function checkMobile() { toggle.style.display = mq.matches ? 'block' : 'none'; }
+    checkMobile(); mq.addEventListener('change', checkMobile);
+    toggle.addEventListener('click', () => { drawer.style.display = 'flex'; });
+    close.addEventListener('click',  () => { drawer.style.display = 'none'; });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

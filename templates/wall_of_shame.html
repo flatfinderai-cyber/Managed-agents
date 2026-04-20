@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Wall of Shame — FlatFinder™: Housing Revolutionised™{% endblock %}
+
+{% macro score_gauge(score) %}
+  {% set level = 'low' if score < 30 else ('mid' if score < 60 else 'high') %}
+  {% set colour = '#ef4444' if score < 30 else ('#f59e0b' if score < 60 else '#22c55e') %}
+  <div class="score-gauge">
+    <div class="score-gauge__bar">
+      <div class="score-gauge__fill score-gauge__fill--{{ level }}" style="width:{{ score }}%"></div>
+    </div>
+    <span class="score-gauge__value" style="color:{{ colour }}">{{ "%.0f"|format(score) }}/100</span>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<!-- © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™: Housing Revolutionised™ -->
+<div style="background:var(--bg-iso-grid);padding:4rem 0;text-align:center">
+  <div class="container">
+    <h1 style="font-size:clamp(2rem,6vw,4rem);margin-bottom:1rem">🎪 FlatFinder™ Compliance Carnival</h1>
+    <p style="font-size:1.25rem;color:var(--colour-text-secondary);margin-bottom:1.5rem">Where predatory landlords get the recognition they truly deserve.</p>
+    <p style="font-size:0.85rem;color:var(--colour-text-muted)">All records are based on verified complaints, public reporting, and FlatFinder™ community submissions.</p>
+  </div>
+</div>
+
+<!-- TIER 1: House of Lame -->
+<div style="background:rgba(245,158,11,0.04);padding:4rem 0">
+  <div class="container">
+    <h2 style="font-size:2rem;margin-bottom:0.5rem">🎠 House of Lame</h2>
+    <p style="color:var(--colour-text-secondary);margin-bottom:2rem">Flagged by the community. Not quite in the Wall of Shame yet — but Benny's got his eye on 'em. 👁️</p>
+
+    {% if flagged %}
+      <div class="grid grid--auto" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2rem">
+        {% for agent in flagged %}
+          <div class="card">
+            <h3 style="margin-bottom:0.25rem">{{ agent.name }}</h3>
+            <p style="color:var(--colour-text-muted);font-size:0.9rem;margin-bottom:0.75rem">{{ agent.company }}</p>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">
+              {% for city in agent.cities_active %}
+                <span style="background:var(--bg-secondary);color:var(--colour-accent);padding:2px 8px;border-radius:4px;font-size:0.75rem">{{ city }}</span>
+              {% endfor %}
+            </div>
+            {{ score_gauge(agent.compliance_score) }}
+            <span class="badge badge--flagged" style="display:inline-block;margin-top:1rem">⚠️ Flagged</span>
+            {% if agent.notes %}
+              <p style="color:var(--colour-text-muted);font-size:0.9rem;margin-top:1rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">{{ agent.notes }}</p>
+            {% endif %}
+            <a href="/agents/{{ agent.id }}" class="btn btn--ghost btn--sm" style="margin-top:1rem;display:inline-block">View Profile</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--colour-text-muted);text-align:center;padding:2rem">The House of Lame is empty. For now.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Carnival Divider -->
+<div style="text-align:center;font-size:2rem;padding:2rem 0">🎠 🎡 🎢</div>
+
+<!-- TIER 2: Wall of Shame -->
+<div style="background:rgba(239,68,68,0.03);padding:4rem 0">
+  <div class="container">
+    <h2 style="font-size:2rem;margin-bottom:0.5rem">🚨 Wall of Shame</h2>
+    <p style="color:var(--colour-text-secondary);margin-bottom:2rem">Under community surveillance. Multiple reports received. Not yet blacklisted — but the jury's deliberating.</p>
+
+    {% if watchlist %}
+      <div class="grid grid--auto" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2rem">
+        {% for agent in watchlist %}
+          <div class="card">
+            <h3 style="margin-bottom:0.25rem">{{ agent.name }}</h3>
+            <p style="color:var(--colour-text-muted);font-size:0.9rem;margin-bottom:0.75rem">{{ agent.company }}</p>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">
+              {% for city in agent.cities_active %}
+                <span style="background:var(--bg-secondary);color:var(--colour-accent);padding:2px 8px;border-radius:4px;font-size:0.75rem">{{ city }}</span>
+              {% endfor %}
+            </div>
+            {{ score_gauge(agent.compliance_score) }}
+            <span class="badge badge--watchlist" style="display:inline-block;margin-top:1rem">🔍 Watchlist</span>
+            {% if agent.notes %}
+              <p style="color:var(--colour-text-muted);font-size:0.9rem;margin-top:1rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">{{ agent.notes }}</p>
+            {% endif %}
+            <a href="/agents/{{ agent.id }}" class="btn btn--ghost btn--sm" style="margin-top:1rem;display:inline-block">View Profile</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--colour-text-muted);text-align:center;padding:2rem">No agents on the watchlist yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Carnival Divider -->
+<div style="text-align:center;font-size:2rem;padding:2rem 0">🎠 🎡 🎢</div>
+
+<!-- TIER 3: Hall of Infamy -->
+<div style="background:rgba(239,68,68,0.06);padding:4rem 0">
+  <div class="container">
+    <h2 style="font-family:Playfair Display,serif;font-size:clamp(2rem,5vw,3rem);color:#ef4444;margin-bottom:1rem;text-align:center">🏆 Super Ultra Extra Mega God Awful Worst Slumlord on Earth</h2>
+    <p style="color:var(--colour-text-secondary);margin-bottom:2rem;text-align:center;font-weight:700">BLACKLISTED. Hidden from all search results. Verified violations on file. Benny has spoken. The gavel has fallen.</p>
+
+    {% if blacklisted %}
+      <div class="grid grid--auto" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2rem">
+        {% for agent in blacklisted %}
+          <div class="card" style="position:relative;border-color:#ef4444;border-width:2px;box-shadow:0 0 20px rgba(239,68,68,0.2)">
+            <!-- Blacklist stamp -->
+            <div style="position:absolute;top:20px;right:20px;transform:rotate(-15deg);border:3px solid #ef4444;padding:4px 12px;color:#ef4444;font-weight:900;font-size:0.9rem;letter-spacing:0.1em;opacity:0.9;pointer-events:none">🚫 BLACKLISTED</div>
+
+            <!-- Content -->
+            <h3 style="color:var(--colour-text-primary);margin-bottom:0.25rem">{{ agent.name }}</h3>
+            <p style="color:var(--colour-text-muted);font-size:0.85rem;margin-bottom:0.75rem">{{ agent.company }}</p>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">
+              {% for city in agent.cities_active %}
+                <span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:2px 8px;border-radius:4px;font-size:0.75rem">{{ city }}</span>
+              {% endfor %}
+            </div>
+            {{ score_gauge(agent.compliance_score) }}
+            <span class="badge badge--blacklisted" style="display:inline-block;margin-top:1rem">🚫 Blacklisted</span>
+            {% if agent.blacklist_reason %}
+              <div style="margin-top:1rem;padding:1rem;background:rgba(239,68,68,0.08);border-left:3px solid #ef4444;border-radius:0 0.5rem 0.5rem 0">
+                <p style="font-size:0.85rem;color:var(--colour-text-muted)">{{ agent.blacklist_reason }}</p>
+              </div>
+            {% endif %}
+            <a href="/agents/{{ agent.id }}" class="btn btn--ghost btn--sm" style="margin-top:1rem;display:inline-block">View Full Record</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color:var(--colour-text-muted);text-align:center;padding:2rem">No blacklisted agents on record. Benny's doing a good job.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- CTA Section -->
+<div style="padding:4rem 0;text-align:center;border-top:1px solid var(--border-colour)">
+  <div class="container">
+    <h3 style="margin-bottom:1rem">🐱 Think someone's missing?</h3>
+    <p style="color:var(--colour-text-secondary);margin-bottom:2rem">Report them to our community moderation team.</p>
+    <a href="/beta" class="btn btn--primary" style="display:inline-block">Join FlatFinder™ Beta</a>
+    <p style="color:var(--colour-text-muted);font-size:0.85rem;margin-top:1.5rem">Benny reviews all submissions personally. (He takes naps in between, but he gets there.)</p>
+  </div>
+</div>
+
+<!-- Legal Disclaimer -->
+<div style="padding:2rem;background:var(--bg-secondary);border-top:1px solid var(--border-colour);font-size:0.8rem;color:var(--colour-text-muted);line-height:1.6">
+  <div class="container">
+    <p>FlatFinder™ compliance records are based on community reports and verified documentation. Organisations may contest their listing by contacting compliance@flatfinder.io. This page is for informational purposes only.</p>
+  </div>
+</div>
+{% endblock %}
