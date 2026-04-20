@@ -4,7 +4,7 @@ import os
 # Set dummy environment variables BEFORE importing routes.vmc
 # so that the create_client call during module load doesn't crash.
 os.environ["NEXT_PUBLIC_SUPABASE_URL"] = "https://example.supabase.co"
-os.environ["SUPABASE_SERVICE_KEY"] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+os.environ["SUPABASE_SERVICE_KEY"] = "dummy.dummy.dummy"
 
 from unittest.mock import patch, MagicMock
 from routes.vmc import _increment_landlord_nonresponse_flag
