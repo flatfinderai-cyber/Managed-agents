@@ -358,25 +358,11 @@ async def report_behaviour(thread_id: str, body: ReportRequest, current: Current
 # ── Internal helpers ────────────────────────────────────────────────────────────
 
 def _increment_landlord_nonresponse_flag(landlord_user_id: str):
-    """Increment non-response flag. 3 in 12 months = auto suspension."""
-    profile = _sb.table("landlord_profiles").select(
-        "id, non_response_flags"
-    ).eq("user_id", landlord_user_id).maybe_single().execute()
-    if not profile.data:
-        return
-    new_count = (profile.data["non_response_flags"] or 0) + 1
-    update = {"non_response_flags": new_count, "updated_at": datetime.now(timezone.utc).isoformat()}
-    if new_count >= 3:
-        update["verification_status"] = "suspended"
-        _sb.table("human_reviews").insert({
-            "subject_type":  "landlord_profile",
-            "subject_id":    profile.data["id"],
-            "trigger_code":  "three_nonresponse_flags",
-            "trigger_detail": f"Landlord has {new_count} non-response flags in 12 months.",
-            "tier":          2,
-            "cost_model":    "cost_recovery",
-        }).execute()
-    _sb.table("landlord_profiles").update(update).eq("id", profile.data["id"]).execute()
+    """Background helper: bump the nonresponse counter for the landlord."""
+    try:
+        _sb.rpc("increment_nonresponse", {"p_user_id": landlord_user_id}).execute()
+    except Exception as e:
+        print(f"Warning: failed to increment nonresponse for {landlord_user_id}: {e!s}")
 
 
 def _grant_tenant_priority(tenant_user_id: str, reason: str):
