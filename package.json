@@ -1,0 +1,13 @@
+{
+  "name": "managed-agents",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Copilot CLI and SDK automation for PR analysis",
+  "scripts": {
+    "copilot:version": "copilot --version",
+    "copilot:pr-analysis": "./scripts/run-copilot-pr-analysis.sh"
+  },
+  "dependencies": {
+    "@github/copilot": "1.0.32"
+  }
+}

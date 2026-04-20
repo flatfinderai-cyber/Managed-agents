@@ -1,0 +1,8 @@
+[project]
+name = "pr-agent"
+version = "0.1.0"
+description = "Fire-and-forget PR agent using Anthropic Managed Agents"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.92.0",
+]
