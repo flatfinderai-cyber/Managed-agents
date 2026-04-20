@@ -1,6 +1,10 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
-from landlord_verify import _require_prior_form
+
+# Mock supabase.create_client before importing landlord_verify
+with patch('supabase.create_client', return_value=MagicMock()):
+    from landlord_verify import _require_prior_form
 
 def test_require_prior_form_approved():
     """Test that no exception is raised when the prior form is approved."""
