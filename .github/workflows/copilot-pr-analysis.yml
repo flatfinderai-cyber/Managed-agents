@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -36,7 +38,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python tools/copilot_pr_analysis.py --mode auto --output artifacts/copilot-pr-analysis.md
+          python tools/copilot_pr_analysis.py --mode sdk --timeout 300 --output artifacts/copilot-pr-analysis.md
 
       - name: Upload analysis artifact
         uses: actions/upload-artifact@v4

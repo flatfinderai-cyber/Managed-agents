@@ -101,9 +101,19 @@ def main() -> int:
         print("Set required values in .env or your shell and retry.", file=sys.stderr)
         return 1
 
-    client = anthropic.Anthropic()
+    try:
+        client = anthropic.Anthropic()
+    except Exception as exc:
+        print(f"Error: failed to initialize Anthropic client: {exc}", file=sys.stderr)
+        return 1
 
-    if not ensure_managed_vars(client, auto_bootstrap=not args.no_auto_bootstrap):
+    try:
+        has_managed_vars = ensure_managed_vars(client, auto_bootstrap=not args.no_auto_bootstrap)
+    except Exception as exc:
+        print(f"Error: failed to provision managed-agent resources: {exc}", file=sys.stderr)
+        return 1
+
+    if not has_managed_vars:
         for var in missing_vars(MANAGED_VARS):
             print(f"Error: {var} is not set.", file=sys.stderr)
         print(
@@ -123,55 +133,64 @@ def main() -> int:
 
     repo_url = os.environ.get("GITHUB_REPO", GITHUB_REPO)
 
-    session = client.beta.sessions.create(
-        agent={
-            "type": "agent",
-            "id": os.environ["MANAGED_AGENT_ID"],
-            "version": agent_version,
-        },
-        environment_id=os.environ["MANAGED_AGENT_ENV_ID"],
-        vault_ids=[os.environ["MANAGED_AGENT_VAULT_ID"]],
-        title=task[:80],
-        resources=[
-            {
-                "type": "github_repository",
-                "url": repo_url,
-                "mount_path": REPO_MOUNT,
-                "authorization_token": os.environ["GITHUB_TOKEN"],
-            }
-        ],
-    )
+    try:
+        session = client.beta.sessions.create(
+            agent={
+                "type": "agent",
+                "id": os.environ["MANAGED_AGENT_ID"],
+                "version": agent_version,
+            },
+            environment_id=os.environ["MANAGED_AGENT_ENV_ID"],
+            vault_ids=[os.environ["MANAGED_AGENT_VAULT_ID"]],
+            title=task[:80],
+            resources=[
+                {
+                    "type": "github_repository",
+                    "url": repo_url,
+                    "mount_path": REPO_MOUNT,
+                    "authorization_token": os.environ["GITHUB_TOKEN"],
+                }
+            ],
+        )
+    except Exception as exc:
+        print(f"Error: failed to create managed-agent session: {exc}", file=sys.stderr)
+        return 1
+
     print(f"session.id = {session.id}")
 
     # Stream-first: open event stream, then send the task while stream is live.
-    with client.beta.sessions.events.stream(session_id=session.id) as stream:
-        try:
-            client.beta.sessions.events.send(
-                session_id=session.id,
-                events=[
-                    {
-                        "type": "user.message",
-                        "content": [{"type": "text", "text": task}],
-                    }
-                ],
-            )
-        except Exception as exc:
-            print(f"Error: failed to send task event: {exc}", file=sys.stderr)
-            return 1
+    try:
+        with client.beta.sessions.events.stream(session_id=session.id) as stream:
+            try:
+                client.beta.sessions.events.send(
+                    session_id=session.id,
+                    events=[
+                        {
+                            "type": "user.message",
+                            "content": [{"type": "text", "text": task}],
+                        }
+                    ],
+                )
+            except Exception as exc:
+                print(f"Error: failed to send task event: {exc}", file=sys.stderr)
+                return 1
 
-        for event in stream:
-            if event.type == "agent.message":
-                for block in event.content:
-                    if block.type == "text":
-                        print(block.text, end="", flush=True)
-            elif event.type == "agent.tool_use":
-                print(f"\n[tool: {event.name}]", flush=True)
-            elif event.type == "session.status_idle":
-                print("\n[idle - done]")
-                break
-            elif event.type == "session.status_terminated":
-                print("\n[terminated]")
-                break
+            for event in stream:
+                if event.type == "agent.message":
+                    for block in event.content:
+                        if block.type == "text":
+                            print(block.text, end="", flush=True)
+                elif event.type == "agent.tool_use":
+                    print(f"\n[tool: {event.name}]", flush=True)
+                elif event.type == "session.status_idle":
+                    print("\n[idle - done]")
+                    break
+                elif event.type == "session.status_terminated":
+                    print("\n[terminated]")
+                    break
+    except Exception as exc:
+        print(f"Error: managed-agent stream failed: {exc}", file=sys.stderr)
+        return 1
 
     return 0
 

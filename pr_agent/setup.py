@@ -98,43 +98,55 @@ def upsert_env_values(env_path: Path, values: dict[str, str]) -> None:
 def provision_managed_agent(client: anthropic.Anthropic) -> dict[str, str]:
     """Create vault, environment, and agent, and return IDs for .env."""
     print("Creating vault...")
-    vault = client.beta.vaults.create(display_name="pr-agent-vault")
+    try:
+        vault = client.beta.vaults.create(display_name="pr-agent-vault")
+    except Exception as exc:
+        raise RuntimeError(f"Failed to create managed-agent vault: {exc}") from exc
 
     print("Adding GitHub credential to vault...")
-    client.beta.vaults.credentials.create(
-        vault_id=vault.id,
-        display_name="GitHub PAT",
-        auth={
-            "type": "mcp_oauth",
-            "mcp_server_url": GITHUB_MCP_URL,
-            "access_token": os.environ["GITHUB_TOKEN"],
-            # PATs without expiry; update if your PAT has a real expiry date.
-            "expires_at": "2099-12-31T00:00:00Z",
-        },
-    )
+    try:
+        client.beta.vaults.credentials.create(
+            vault_id=vault.id,
+            display_name="GitHub PAT",
+            auth={
+                "type": "mcp_oauth",
+                "mcp_server_url": GITHUB_MCP_URL,
+                "access_token": os.environ["GITHUB_TOKEN"],
+                # PATs without expiry; update if your PAT has a real expiry date.
+                "expires_at": "2099-12-31T00:00:00Z",
+            },
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Failed to store GitHub credential in vault: {exc}") from exc
 
     print("Creating environment...")
-    env = client.beta.environments.create(
-        name="pr-agent-env",
-        config={
-            "type": "cloud",
-            "networking": {"type": "unrestricted"},
-        },
-    )
+    try:
+        env = client.beta.environments.create(
+            name="pr-agent-env",
+            config={
+                "type": "cloud",
+                "networking": {"type": "unrestricted"},
+            },
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Failed to create managed-agent environment: {exc}") from exc
 
     print("Creating agent...")
-    agent = client.beta.agents.create(
-        name="pr-agent",
-        model="claude-opus-4-7",
-        system=SYSTEM_PROMPT,
-        mcp_servers=[
-            {"type": "url", "name": "github", "url": GITHUB_MCP_URL},
-        ],
-        tools=[
-            {"type": "agent_toolset_20260401"},
-            {"type": "mcp_toolset", "mcp_server_name": "github"},
-        ],
-    )
+    try:
+        agent = client.beta.agents.create(
+            name="pr-agent",
+            model="claude-opus-4-7",
+            system=SYSTEM_PROMPT,
+            mcp_servers=[
+                {"type": "url", "name": "github", "url": GITHUB_MCP_URL},
+            ],
+            tools=[
+                {"type": "agent_toolset_20260401"},
+                {"type": "mcp_toolset", "mcp_server_name": "github"},
+            ],
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Failed to create managed agent: {exc}") from exc
 
     return {
         "MANAGED_AGENT_VAULT_ID": vault.id,
@@ -157,8 +169,15 @@ def main() -> int:
         print("Managed agent values already present; skipping reprovision.")
         return 0
 
-    client = anthropic.Anthropic()
-    managed_values = provision_managed_agent(client)
+    try:
+        client = anthropic.Anthropic()
+        managed_values = provision_managed_agent(client)
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"Error: Anthropic setup failed: {exc}", file=sys.stderr)
+        return 1
     upsert_env_values(ENV_PATH, managed_values)
 
     print("\n--- Managed agent values ---")
