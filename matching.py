@@ -238,6 +238,8 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
 
 
 def _all_passed(filter_results: dict) -> bool:
+    if not filter_results:
+        return False
     return all(v.get("pass", False) for v in filter_results.values())
 
 
