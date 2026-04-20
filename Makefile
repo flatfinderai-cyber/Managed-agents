@@ -43,4 +43,4 @@ frontend:
 backend:
 	cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 test-search-blitz:
-	SUPABASE_URL=http://test-url.com SUPABASE_SERVICE_KEY=a.b.c PYTHONPATH=. python3 -m pytest tests/test_search_blitz.py -v
+	PYTHONPATH=. python3 -m pytest tests/test_search_blitz.py -v

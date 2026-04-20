@@ -1,5 +1,8 @@
 import pytest
 from fastapi import HTTPException
+import os
+os.environ["SUPABASE_URL"] = "http://test-url.com"
+os.environ["SUPABASE_SERVICE_KEY"] = "a.b.c"
 from routes.search_blitz import _require_internal_key
 
 def test_require_internal_key_success(monkeypatch):
