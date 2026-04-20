@@ -62,25 +62,23 @@ def write_output(path: Path, text: str) -> None:
 
 
 def run_cli(timeout: float) -> str:
-    copilot_bin = shutil.which("copilot")
-    if not copilot_bin:
+    if not shutil.which("copilot"):
         raise RuntimeError("Copilot CLI binary not found on PATH.")
 
     # Keep non-interactive permissions scoped to the repository path and GitHub URLs.
     # No shell is used, and command arguments are passed as a sequence.
     allowed_urls = "https://github.com,https://api.github.com"
-    cmd = [
-        copilot_bin,
-        "-p",
-        PROMPT,
-        "--silent",
-        "--no-ask-user",
-        "--allow-all-tools",
-        f"--add-dir={REPO_ROOT}",
-        f"--allow-url={allowed_urls}",
-    ]
     completed = subprocess.run(
-        cmd,
+        [
+            "copilot",
+            "-p",
+            PROMPT,
+            "--silent",
+            "--no-ask-user",
+            "--allow-all-tools",
+            f"--add-dir={REPO_ROOT}",
+            f"--allow-url={allowed_urls}",
+        ],
         cwd=REPO_ROOT,
         check=True,
         capture_output=True,
