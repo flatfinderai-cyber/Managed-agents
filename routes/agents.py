@@ -4,13 +4,14 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, List
 import os
-from supabase import create_client
+from supabase._async.client import AsyncClient as SupabaseAsyncClient, ClientOptions
 
 router = APIRouter()
 
-supabase = create_client(
+supabase = SupabaseAsyncClient(
     os.environ["SUPABASE_URL"],
     os.environ["SUPABASE_SERVICE_KEY"],
+    options=ClientOptions()
 )
 
 
@@ -49,18 +50,18 @@ async def search_agents(
     if blacklisted_only:
         query = query.eq("is_blacklisted", True)
 
-    result = query.order("compliance_score", desc=False).limit(50).execute()
+    result = await query.order("compliance_score", desc=False).limit(50).execute()
     return {"agents": result.data, "count": len(result.data)}
 
 
 @router.get("/{agent_id}")
 async def get_agent(agent_id: str):
     """Get full agent profile including violations."""
-    agent = supabase.table("agents").select("*").eq("id", agent_id).single().execute()
+    agent = await supabase.table("agents").select("*").eq("id", agent_id).single().execute()
     if not agent.data:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    violations = supabase.table("agent_violations").select("*").eq(
+    violations = await supabase.table("agent_violations").select("*").eq(
         "agent_id", agent_id
     ).execute()
 
@@ -73,7 +74,7 @@ async def get_agent(agent_id: str):
 @router.get("/{agent_id}/compliance")
 async def get_agent_compliance(agent_id: str):
     """Returns compliance score and recommendation for an agent."""
-    agent = supabase.table("agents").select(
+    agent = await supabase.table("agents").select(
         "compliance_score, status, is_blacklisted, blacklist_reason, "
         "human_rights_flags, income_requirement_multiplier, uses_illegal_screening"
     ).eq("id", agent_id).single().execute()
@@ -110,7 +111,7 @@ async def report_agent(report: AgentReport):
 
     financial_cents = int(report.financial_harm_cad * 100) if report.financial_harm_cad else None
 
-    result = supabase.table("agent_reports").insert({
+    result = await supabase.table("agent_reports").insert({
         "agent_id": report.agent_id,
         "agent_name_raw": report.agent_name_raw,
         "agent_company_raw": report.agent_company_raw,
@@ -140,5 +141,5 @@ async def get_full_blacklist(city: Optional[str] = Query(None)):
     if city:
         query = query.contains("cities_active", [city])
 
-    result = query.order("compliance_score").execute()
+    result = await query.order("compliance_score").execute()
     return {"blacklisted_agents": result.data, "count": len(result.data)}
