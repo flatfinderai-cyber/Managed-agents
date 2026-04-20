@@ -1,29 +1,35 @@
-# FlatFinder
+# Managed-agents
 
-FlatFinder is a monorepo for the anti-gatekeeping rental platform, with a Next.js frontend and FastAPI backend.
+## Copilot Stack
 
-## Quick Start
+This repository is wired to use:
 
-```bash
-bash start.sh
-```
+- GitHub Copilot CLI (`@github/copilot`)
+- GitHub Copilot SDK (`github-copilot-sdk`)
+- Copilot Skill for PR analysis
+- GitHub Actions workflow for automated PR analysis comments
 
-This starts:
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000`
-- API docs: `http://localhost:8000/api/docs`
+## Local Run
 
-## Contributor Docs
-
-- Contributor guide: [`AGENTS.md`](./AGENTS.md)
-- PR checklist/template: [`.github/pull_request_template.md`](./.github/pull_request_template.md)
-
-## Common Development Commands
+Run PR analysis with one command:
 
 ```bash
-make dev
-make build
-make test
-make lint
-make typecheck
+./scripts/run-copilot-pr-analysis.sh
 ```
+
+Output file:
+
+- `artifacts/copilot-pr-analysis.md`
+
+## CI Run
+
+Workflow file:
+
+- `.github/workflows/copilot-pr-analysis.yml`
+
+On each pull request, CI:
+
+1. Installs Copilot CLI + SDK
+2. Runs PR analysis script
+3. Uploads analysis artifact
+4. Posts analysis comment on the PR

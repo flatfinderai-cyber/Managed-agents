@@ -1,27 +1,13 @@
 {
-  "name": "flatfinder",
+  "name": "managed-agents",
   "private": true,
-  "description": "FlatFinder™ — Anti-Gatekeeping Rental Platform. © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved.",
+  "version": "0.1.0",
+  "description": "Copilot CLI and SDK automation for PR analysis",
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "test": "turbo test",
-    "lint": "turbo lint",
-    "scrape:toronto": "node packages/scraper/scripts/run-toronto.js",
-    "scrape:vancouver": "node packages/scraper/scripts/run-vancouver.js",
-    "scrape:paris": "node packages/scraper/scripts/run-paris.js",
-    "scrape:edinburgh": "node packages/scraper/scripts/run-edinburgh.js"
+    "copilot:version": "copilot --version",
+    "copilot:pr-analysis": "./scripts/run-copilot-pr-analysis.sh"
   },
-  "devDependencies": {
-    "turbo": "^1.13.0",
-    "typescript": "^5.3.0",
-    "@types/node": "^20.0.0"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "engines": {
-    "node": ">=20.0.0"
+  "dependencies": {
+    "@github/copilot": "1.0.32"
   }
 }
