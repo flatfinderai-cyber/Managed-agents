@@ -388,7 +388,27 @@ CREATE POLICY "landlord_own_profile"  ON landlord_profiles  FOR ALL USING (auth.
 CREATE POLICY "landlord_own_form1"    ON landlord_form1_kyc FOR ALL USING (
     EXISTS (SELECT 1 FROM landlord_profiles lp WHERE lp.id = landlord_form1_kyc.landlord_id AND lp.user_id = auth.uid())
 );
+CREATE POLICY "landlord_own_form2"    ON landlord_form2_authority FOR ALL USING (
+    EXISTS (SELECT 1 FROM landlord_profiles lp WHERE lp.id = landlord_form2_authority.landlord_id AND lp.user_id = auth.uid())
+);
+CREATE POLICY "landlord_own_form3"    ON landlord_form3_municipal FOR ALL USING (
+    EXISTS (SELECT 1 FROM landlord_profiles lp WHERE lp.id = landlord_form3_municipal.landlord_id AND lp.user_id = auth.uid())
+);
+CREATE POLICY "landlord_own_form4"    ON landlord_form4_history FOR ALL USING (
+    EXISTS (SELECT 1 FROM landlord_profiles lp WHERE lp.id = landlord_form4_history.landlord_id AND lp.user_id = auth.uid())
+);
 CREATE POLICY "landlord_own_form5"    ON landlord_form5_agreement FOR ALL USING (
     EXISTS (SELECT 1 FROM landlord_profiles lp WHERE lp.id = landlord_form5_agreement.landlord_id AND lp.user_id = auth.uid())
 );
 CREATE POLICY "listing_details_public_read" ON listing_details FOR SELECT USING (TRUE);
+
+-- SERVICE ROLE POLICIES
+CREATE POLICY "tenant_profiles_service" ON tenant_profiles FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "tenant_documents_service" ON tenant_documents FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "landlord_profiles_service" ON landlord_profiles FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "landlord_form1_service" ON landlord_form1_kyc FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "landlord_form2_service" ON landlord_form2_authority FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "landlord_form3_service" ON landlord_form3_municipal FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "landlord_form4_service" ON landlord_form4_history FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "landlord_form5_service" ON landlord_form5_agreement FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "listing_details_service" ON listing_details FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
