@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import secrets
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -56,7 +57,7 @@ def _require_internal_key(x_internal_key: Optional[str]) -> None:
             status_code=503,
             detail="Internal API key not configured — set INTERNAL_API_KEY in environment.",
         )
-    if not x_internal_key or x_internal_key != expected:
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, expected):
         raise HTTPException(status_code=403, detail="Forbidden. Invalid or missing internal API key.")
 
 
