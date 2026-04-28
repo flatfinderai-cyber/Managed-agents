@@ -383,19 +383,25 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
     now = _now()
     upserted_matches = []
 
-    for rank_index, match in enumerate(passed_matches):
-        listing_id = match["listing_id"]
-
+    # Pre-fetch existing matches to avoid N+1 query pattern
+    existing_map = {}
+    if passed_matches:
         try:
-            existing = (
+            listing_ids = [m["listing_id"] for m in passed_matches]
+            existing_result = (
                 _sb.table("matches")
-                .select("id, status")
+                .select("id, status, listing_id")
                 .eq("tenant_user_id", tenant_user_id)
-                .eq("listing_id", listing_id)
+                .in_("listing_id", listing_ids)
                 .execute()
             )
+            existing_map = {m["listing_id"]: m for m in (existing_result.data or [])}
         except Exception as exc:
             raise _db_error(exc)
+
+    for rank_index, match in enumerate(passed_matches):
+        listing_id = match["listing_id"]
+        existing_match = existing_map.get(listing_id)
 
         match_record = {
             "tenant_user_id": tenant_user_id,
@@ -409,10 +415,10 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
         }
 
         try:
-            if existing.data:
-                record_id = existing.data[0]["id"]
+            if existing_match:
+                record_id = existing_match["id"]
                 # Do not overwrite a confirmed match status
-                if existing.data[0].get("status") not in ("confirmed_both",):
+                if existing_match.get("status") not in ("confirmed_both",):
                     match_record["status"] = "matched"
                 result = (
                     _sb.table("matches")
