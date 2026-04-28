@@ -9,6 +9,7 @@
 #   - Identity documents cannot be requested before match confirmation.
 #   - All 6 tiers are equally valid. No tier weighting is visible to landlords.
 
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -105,7 +106,8 @@ def _db_error(exc: Exception) -> HTTPException:
             status_code=503,
             detail="Database not configured — add credentials to .env.local",
         )
-    return HTTPException(status_code=503, detail=f"Database error: {msg}")
+    logging.error(f"Database error: {msg}")
+    return HTTPException(status_code=503, detail="A database error occurred. Please try again later.")
 
 
 def _now() -> str:

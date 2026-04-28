@@ -12,6 +12,7 @@
 #   - Credit score is never a filter gate.
 #   - Filters are applied in order 1–6. A listing fails at the first failing filter.
 
+import logging
 import os
 import uuid
 from datetime import datetime, date, timezone
@@ -45,7 +46,8 @@ def _db_error(exc: Exception) -> HTTPException:
             status_code=503,
             detail="Database not configured — add credentials to .env.local",
         )
-    return HTTPException(status_code=503, detail=f"Database error: {str(exc)}")
+    logging.error(f"Database error: {str(exc)}")
+    return HTTPException(status_code=503, detail="A database error occurred. Please try again later.")
 
 
 def _now() -> str:

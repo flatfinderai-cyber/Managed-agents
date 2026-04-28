@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import sys
 from pathlib import Path
@@ -98,6 +99,7 @@ async def run_pipeline_endpoint(
     try:
         payload = await asyncio.to_thread(_run_pipeline_sync, body)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Pipeline failed: {exc!s}") from exc
+        logging.error(f"Pipeline failed: {exc!s}")
+        raise HTTPException(status_code=500, detail="Pipeline execution failed.") from exc
 
     return payload

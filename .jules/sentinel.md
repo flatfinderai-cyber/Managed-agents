@@ -1,0 +1,4 @@
+## 2024-04-24 - Information Exposure via Exception Messages
+**Vulnerability:** Found multiple endpoints raising HTTP 500/502/503 errors and embedding `str(exc)` or `exc!s` inside `HTTPException(detail=...)`, which inadvertently leaks underlying SQL statements, database paths, external service error messages, stack trace snippets, or logic flow details back to the client. This breaks the "Fail securely" principle.
+**Learning:** Returning exception strings back directly to the client can be a critical security issue as it can leak database schema and API details. It's easy for developers to accidentally leak this context if they just want to add debug info.
+**Prevention:** Catch generic or database exceptions and use `logging.error(f"Error: {exc}")` to write the full exception string to application logs, while only returning a sterile, generic user-facing message like `"A database error occurred"` via `HTTPException`.
