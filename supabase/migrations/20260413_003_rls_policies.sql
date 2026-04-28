@@ -24,7 +24,8 @@ CREATE POLICY "agents_public_read"
 
 CREATE POLICY "agents_service_write"
   ON agents FOR ALL
-  USING (auth.role() = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- AGENT VIOLATIONS — public read, service-role write
@@ -35,7 +36,8 @@ CREATE POLICY "agent_violations_public_read"
 
 CREATE POLICY "agent_violations_service_write"
   ON agent_violations FOR ALL
-  USING (auth.role() = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- LISTINGS — public read of active listings, service-role write
@@ -46,7 +48,8 @@ CREATE POLICY "listings_public_read_active"
 
 CREATE POLICY "listings_service_write"
   ON listings FOR ALL
-  USING (auth.role() = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- AGENT REPORTS — users can insert their own, read their own; service reads all
@@ -61,7 +64,8 @@ CREATE POLICY "agent_reports_user_read_own"
 
 CREATE POLICY "agent_reports_service_all"
   ON agent_reports FOR ALL
-  USING (auth.role() = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- RENTER DEMANDS — fully private, user owns their own rows
@@ -73,7 +77,8 @@ CREATE POLICY "renter_demands_user_own"
 
 CREATE POLICY "renter_demands_service_all"
   ON renter_demands FOR ALL
-  USING (auth.role() = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- DEMAND TEMPLATES — public read (used by all tenants)
@@ -84,7 +89,8 @@ CREATE POLICY "demand_templates_public_read"
 
 CREATE POLICY "demand_templates_service_write"
   ON demand_templates FOR ALL
-  USING (auth.role() = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SAVED SEARCHES — user owns their own rows
@@ -93,6 +99,11 @@ CREATE POLICY "saved_searches_user_own"
   ON saved_searches FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "saved_searches_service_all"
+  ON saved_searches FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SEARCH BLITZ ORDERS — user owns their own rows
@@ -104,4 +115,5 @@ CREATE POLICY "search_blitz_orders_user_own"
 
 CREATE POLICY "search_blitz_orders_service_all"
   ON search_blitz_orders FOR ALL
-  USING (auth.role() = 'service_role');
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
