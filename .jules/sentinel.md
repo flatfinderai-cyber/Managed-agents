@@ -1,0 +1,4 @@
+## 2024-04-28 - Fix timing attack vulnerability in API key verification
+**Vulnerability:** The codebase was using standard equality operators (`!=`) to compare security-sensitive strings (the `INTERNAL_API_KEY` with the `x-internal-key` header) in multiple route files (`search_blitz.py`, `orchestrator.py`, `human_review.py`, `stack_decisions.py` and their duplicates in `routes/`).
+**Learning:** Standard string comparisons stop at the first non-matching character, making the response time dependent on how many characters matched. This exposes the system to timing attacks, where an attacker can systematically guess the secret key by measuring the time it takes the server to reject incorrect guesses.
+**Prevention:** Always use constant-time comparison functions, like `secrets.compare_digest()`, when comparing security-sensitive strings such as API keys, passwords, or tokens.
