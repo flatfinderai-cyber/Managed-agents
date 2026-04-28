@@ -66,11 +66,11 @@ def _months_between(d1: date, d2: date) -> float:
 
 
 def _match_tenant_id(m: dict) -> Optional[str]:
-    return m.get("tenant_user_id") or m.get("tenant_id")
+    return m.get("tenant_id")
 
 
 def _match_landlord_id(m: dict) -> Optional[str]:
-    return m.get("landlord_user_id") or m.get("landlord_id")
+    return m.get("landlord_id")
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ def _match_landlord_id(m: dict) -> Optional[str]:
 
 
 class RunMatchRequest(BaseModel):
-    tenant_user_id: str
+    tenant_id: str
     listing_ids: Optional[List[str]] = None     # Empty = all active listings
 
 
@@ -122,12 +122,7 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
         f1_inspection_current = False
 
     f1_pass = f1_landlord_verified and f1_has_floor_plan and f1_inspection_current
-    results["filter_1_listing_quality"] = {
-        "pass": f1_pass,
-        "landlord_verified": f1_landlord_verified,
-        "floor_plan_present": f1_has_floor_plan,
-        "inspection_within_24_months": f1_inspection_current,
-    }
+    results["filter1_listing_verified"] = f1_pass
     if not f1_pass:
         return results
 
@@ -135,7 +130,7 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
     # Filter 2: Tenant verification
     # ------------------------------------------------------------------
     f2_pass = tenant.get("verification_status") == "verified"
-    results["filter_2_tenant_verified"] = {"pass": f2_pass}
+    results["filter2_tenant_verified"] = f2_pass
     if not f2_pass:
         return results
 
@@ -151,11 +146,7 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
     type_match = any(t.strip().lower() == listing_type for t in desired_types) if desired_types else True
 
     f3_pass = city_match and type_match
-    results["filter_3_location_and_type"] = {
-        "pass": f3_pass,
-        "city_match": city_match,
-        "property_type_match": type_match,
-    }
+    results["filter3_location_match"] = f3_pass
     if not f3_pass:
         return results
 
@@ -175,12 +166,7 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
     else:
         f4_pass = True  # No window specified — not a disqualifier
 
-    results["filter_4_availability"] = {
-        "pass": f4_pass,
-        "listing_available_date": listing.get("available_date"),
-        "tenant_window_from": tenant.get("desired_move_in_from"),
-        "tenant_window_to": tenant.get("desired_move_in_to"),
-    }
+    results["filter4_availability_match"] = f4_pass
     if not f4_pass:
         return results
 
@@ -203,10 +189,7 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
                 f5_failures.append(requirement)
 
     f5_pass = len(f5_failures) == 0
-    results["filter_5_non_negotiables"] = {
-        "pass": f5_pass,
-        "unmet_requirements": f5_failures if not f5_pass else [],
-    }
+    results["filter5_non_negotiables_met"] = f5_pass
     if not f5_pass:
         return results
 
@@ -214,23 +197,24 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
     # Filter 6: No active discrimination or predatory flags
     # ------------------------------------------------------------------
     listing_id = listing.get("id")
-    landlord_user_id = landlord.get("user_id")
+    landlord_id = landlord.get("user_id")
 
     try:
         flag_result = (
             _sb.table("discrimination_flags")
             .select("id")
-            .or_(f"listing_id.eq.{listing_id},subject_id.eq.{landlord_user_id}")
-            .eq("active", True)
+            .or_(f"listing_id.eq.{listing_id},landlord_id.eq.{landlord_id}")
+            .eq("action", "pending_review")
             .limit(1)
             .execute()
         )
+        # Note: Migration 007 uses landlord_id in discrimination_flags too
         f6_pass = len(flag_result.data or []) == 0
     except Exception:
         # If flags cannot be checked, err on the side of caution
         f6_pass = False
 
-    results["filter_6_no_active_flags"] = {"pass": f6_pass}
+    results["filter6_no_flags"] = f6_pass
     if not f6_pass:
         return results
 
@@ -238,7 +222,15 @@ def _apply_filters(tenant: dict, listing: dict, landlord: dict) -> dict:
 
 
 def _all_passed(filter_results: dict) -> bool:
-    return all(v.get("pass", False) for v in filter_results.values())
+    required_filters = [
+        "filter1_listing_verified",
+        "filter2_tenant_verified",
+        "filter3_location_match",
+        "filter4_availability_match",
+        "filter5_non_negotiables_met",
+        "filter6_no_flags"
+    ]
+    return all(filter_results.get(f) is True for f in required_filters)
 
 
 def _calculate_affordability(tenant: dict, listing: dict) -> Optional[float]:
@@ -283,15 +275,15 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
     The landlord view is intentionally omitted from this response.
     No ranks, no tiers, no scores are surfaced to any landlord.
     """
-    assert_same_user(body.tenant_user_id, current)
-    tenant_user_id = body.tenant_user_id
+    assert_same_user(body.tenant_id, current)
+    tenant_id = body.tenant_id
 
     # Fetch tenant profile
     try:
         tenant_result = (
             _sb.table("tenant_profiles")
             .select("*")
-            .eq("user_id", tenant_user_id)
+            .eq("user_id", tenant_id)
             .single()
             .execute()
         )
@@ -320,7 +312,7 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
     listings = listing_result.data or []
 
     if not listings:
-        return {"tenant_user_id": tenant_user_id, "matches": [], "total_evaluated": 0}
+        return {"tenant_id": tenant_id, "matches": [], "total_evaluated": 0}
 
     # Gather all unique landlord profile user_ids
     landlord_user_ids = list({lst.get("landlord_user_id") for lst in listings if lst.get("landlord_user_id")})
@@ -354,12 +346,13 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
 
             passed_matches.append({
                 "listing_id": listing["id"],
-                "landlord_user_id": landlord_user_id,
+                "landlord_id": landlord_user_id,
                 "affordability_pct": affordability_pct,
                 "is_affordable": is_affordable,
                 "compliance_score": _compliance_score(landlord),
                 "available_date": available_date,
                 "filter_results": filter_results,
+                "rent_cents": listing.get("price") or listing.get("rent_cents"),
                 "listing_snapshot": {
                     "city": listing.get("city"),
                     "property_type": listing.get("property_type"),
@@ -390,7 +383,7 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
             existing = (
                 _sb.table("matches")
                 .select("id, status")
-                .eq("tenant_user_id", tenant_user_id)
+                .eq("tenant_id", tenant_id)
                 .eq("listing_id", listing_id)
                 .execute()
             )
@@ -398,21 +391,26 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
             raise _db_error(exc)
 
         match_record = {
-            "tenant_user_id": tenant_user_id,
+            "tenant_id": tenant_id,
             "listing_id": listing_id,
-            "filter_results": match["filter_results"],
+            "landlord_id": match["landlord_id"],
             "affordability_pct": match["affordability_pct"],
             "is_affordable": match["is_affordable"],
+            "tenant_net_monthly_cents": tenant.get("net_monthly_income_cents"),
+            "rent_cents": match["rent_cents"],
             # rank is internal only — never exposed to landlord
-            "internal_rank": rank_index + 1,
+            "rank_position": rank_index + 1,
             "updated_at": now,
         }
+        # Add individual filter columns
+        for k, v in match["filter_results"].items():
+            match_record[k] = v
 
         try:
             if existing.data:
                 record_id = existing.data[0]["id"]
                 # Do not overwrite a confirmed match status
-                if existing.data[0].get("status") not in ("confirmed_both",):
+                if existing.data[0].get("status") not in ("confirmed_both", "vmc_open", "vmc_complete"):
                     match_record["status"] = "matched"
                 result = (
                     _sb.table("matches")
@@ -423,7 +421,7 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
                 saved = result.data[0] if result.data else {**match_record, "id": record_id}
             else:
                 match_record["id"] = str(uuid.uuid4())
-                match_record["status"] = "matched"
+                match_record["status"] = "pending"
                 match_record["created_at"] = now
                 result = _sb.table("matches").insert(match_record).execute()
                 saved = result.data[0] if result.data else match_record
@@ -440,7 +438,7 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
         })
 
     return {
-        "tenant_user_id": tenant_user_id,
+        "tenant_id": tenant_id,
         "total_evaluated": len(listings),
         "total_matched": len(upserted_matches),
         "matches": upserted_matches,
@@ -448,22 +446,22 @@ async def run_matching(body: RunMatchRequest, current: CurrentUserId):
 
 
 # ---------------------------------------------------------------------------
-# GET /tenant/{tenant_user_id}
+# GET /tenant/{tenant_id}
 # ---------------------------------------------------------------------------
 
 
-@router.get("/tenant/{tenant_user_id}")
-async def get_matches_for_tenant(tenant_user_id: str, current: CurrentUserId):
+@router.get("/tenant/{tenant_id}")
+async def get_matches_for_tenant(tenant_id: str, current: CurrentUserId):
     """
     Return all matches for a tenant, in ranked order.
     Tenant-facing only — affordability and filter results are included.
     """
-    assert_same_user(tenant_user_id, current)
+    assert_same_user(tenant_id, current)
     try:
         result = (
             _sb.table("matches")
             .select("*")
-            .eq("tenant_id", tenant_user_id)
+            .eq("tenant_id", tenant_id)
             .order("rank_position")
             .execute()
         )
@@ -476,7 +474,7 @@ async def get_matches_for_tenant(tenant_user_id: str, current: CurrentUserId):
     for m in matches:
         m.pop("rank_position", None)
 
-    return {"tenant_user_id": tenant_user_id, "total": len(matches), "matches": matches}
+    return {"tenant_id": tenant_id, "total": len(matches), "matches": matches}
 
 
 # ---------------------------------------------------------------------------
@@ -582,8 +580,10 @@ async def confirm_match(body: ConfirmMatchRequest, current: CurrentUserId):
 
     if body.role == "tenant":
         update_payload["confirmed_tenant_at"] = now
+        update_payload["status"] = "confirmed_tenant"
     else:
         update_payload["confirmed_landlord_at"] = now
+        update_payload["status"] = "confirmed_landlord"
 
     # Determine whether both parties have now confirmed
     tenant_confirmed = match.get("confirmed_tenant_at") or (body.role == "tenant")
@@ -592,7 +592,7 @@ async def confirm_match(body: ConfirmMatchRequest, current: CurrentUserId):
     both_confirmed = bool(tenant_confirmed and landlord_confirmed)
     if both_confirmed:
         update_payload["status"] = "confirmed_both"
-        update_payload["confirmed_both_at"] = now
+        # update_payload["confirmed_both_at"] = now # Column doesn't exist in migration 007
 
     try:
         result = (
@@ -622,6 +622,8 @@ async def confirm_match(body: ConfirmMatchRequest, current: CurrentUserId):
         }
         try:
             _sb.table("vmc_threads").insert(vmc_record).execute()
+            # Also update match with vmc_thread_id
+            _sb.table("matches").update({"vmc_thread_id": vmc_thread_id, "status": "vmc_open"}).eq("id", body.match_id).execute()
         except Exception:
             # VMC thread creation failure is non-fatal for the confirmation flow
             pass

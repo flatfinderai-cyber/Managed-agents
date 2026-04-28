@@ -37,9 +37,7 @@ def _user_in_match_row(match: dict, user_id: str) -> bool:
     """Whether JWT subject is tenant or landlord on this match row."""
     ids = [
         match.get("tenant_id"),
-        match.get("tenant_user_id"),
         match.get("landlord_id"),
-        match.get("landlord_user_id"),
     ]
     return user_id in {str(x) for x in ids if x}
 
