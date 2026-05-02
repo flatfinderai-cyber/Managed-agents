@@ -17,6 +17,7 @@
 # Admin routes require x-internal-key header matching INTERNAL_API_KEY env var.
 
 import os
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
@@ -44,8 +45,8 @@ BUSINESS_HOURS_PER_DAY = 8
 # SLA in hours per tier
 TIER_SLA_HOURS = {
     1: 48,
-    2: 5 * BUSINESS_HOURS_PER_DAY,    # 5 business days = 40h
-    3: 10 * BUSINESS_HOURS_PER_DAY,   # 10 business days = 80h
+    2: 5 * BUSINESS_HOURS_PER_DAY,  # 5 business days = 40h
+    3: 10 * BUSINESS_HOURS_PER_DAY,  # 10 business days = 80h
 }
 
 VALID_OUTCOMES = {"cleared", "found_against", "referred_authority", "suspended"}
@@ -56,7 +57,9 @@ VALID_OUTCOMES = {"cleared", "found_against", "referred_authority", "suspended"}
 
 
 def _db_error(exc: Exception) -> HTTPException:
-    if not os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or not os.environ.get("SUPABASE_SERVICE_KEY"):
+    if not os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or not os.environ.get(
+        "SUPABASE_SERVICE_KEY"
+    ):
         return HTTPException(
             status_code=503,
             detail="Database not configured — add credentials to .env.local",
@@ -82,8 +85,10 @@ def _require_internal_key(x_internal_key: Optional[str]) -> None:
             status_code=503,
             detail="Internal API key not configured — set INTERNAL_API_KEY in environment.",
         )
-    if not x_internal_key or x_internal_key != expected:
-        raise HTTPException(status_code=403, detail="Forbidden. Invalid or missing internal API key.")
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, expected):
+        raise HTTPException(
+            status_code=403, detail="Forbidden. Invalid or missing internal API key."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +107,7 @@ class OutcomeRequest(BaseModel):
 
 class FlagRequest(BaseModel):
     listing_id: str
-    flag_type: str                              # "discriminatory" | "predatory"
+    flag_type: str  # "discriminatory" | "predatory"
     grounds: List[str]
     confidence_score: float = Field(ge=0.0, le=1.0)
     flagged_content: str
@@ -189,7 +194,9 @@ async def assign_review(review_id: str, body: AssignReviewRequest):
 
     review = review_result.data
     if review.get("status") == "closed":
-        raise HTTPException(status_code=409, detail="This review has already been closed.")
+        raise HTTPException(
+            status_code=409, detail="This review has already been closed."
+        )
 
     tier = int(review.get("tier") or 1)
     now = _now()
@@ -312,7 +319,9 @@ async def record_outcome(review_id: str, body: OutcomeRequest):
                 _sb.table(profile_table).update(
                     {"verification_status": "suspended", "updated_at": now}
                 ).eq("user_id", subject_id).execute()
-                actions_taken.append(f"{profile_table}_verification_status_set_suspended")
+                actions_taken.append(
+                    f"{profile_table}_verification_status_set_suspended"
+                )
             except Exception as exc:
                 raise _db_error(exc)
 
@@ -469,9 +478,9 @@ async def create_flag(body: FlagRequest):
 
         # Deactivate listing
         try:
-            _sb.table("listings").update(
-                {"is_active": False, "updated_at": now}
-            ).eq("id", body.listing_id).execute()
+            _sb.table("listings").update({"is_active": False, "updated_at": now}).eq(
+                "id", body.listing_id
+            ).execute()
             actions_taken.append("listing_deactivated")
         except Exception as exc:
             raise _db_error(exc)
