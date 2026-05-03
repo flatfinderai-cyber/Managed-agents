@@ -1,6 +1,7 @@
 # © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™
 # Agent pipeline API — internal use only (long-running Claude + tools).
 
+import secrets
 from __future__ import annotations
 
 import asyncio
@@ -26,8 +27,10 @@ def _require_internal_key(x_internal_key: Optional[str]) -> None:
             status_code=503,
             detail="Internal API key not configured — set INTERNAL_API_KEY in environment.",
         )
-    if not x_internal_key or x_internal_key != expected:
-        raise HTTPException(status_code=403, detail="Forbidden. Invalid or missing internal API key.")
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, expected):
+        raise HTTPException(
+            status_code=403, detail="Forbidden. Invalid or missing internal API key."
+        )
 
 
 def _serialize_agent_result(result: Any) -> dict[str, Any] | None:
@@ -98,6 +101,8 @@ async def run_pipeline_endpoint(
     try:
         payload = await asyncio.to_thread(_run_pipeline_sync, body)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Pipeline failed: {exc!s}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Pipeline failed: {exc!s}"
+        ) from exc
 
     return payload
