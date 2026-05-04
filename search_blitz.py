@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import secrets
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -56,8 +57,10 @@ def _require_internal_key(x_internal_key: Optional[str]) -> None:
             status_code=503,
             detail="Internal API key not configured — set INTERNAL_API_KEY in environment.",
         )
-    if not x_internal_key or x_internal_key != expected:
-        raise HTTPException(status_code=403, detail="Forbidden. Invalid or missing internal API key.")
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, expected):
+        raise HTTPException(
+            status_code=403, detail="Forbidden. Invalid or missing internal API key."
+        )
 
 
 def _perplexity_key() -> str:
@@ -71,7 +74,9 @@ def _perplexity_key() -> str:
 
 
 def _perplexity_model() -> str:
-    return (os.environ.get("PERPLEXITY_MODEL") or DEFAULT_PERPLEXITY_MODEL).strip() or DEFAULT_PERPLEXITY_MODEL
+    return (
+        os.environ.get("PERPLEXITY_MODEL") or DEFAULT_PERPLEXITY_MODEL
+    ).strip() or DEFAULT_PERPLEXITY_MODEL
 
 
 def _now_iso() -> str:
@@ -94,9 +99,17 @@ def _fail_order(order_id: str, err: str) -> None:
 def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
     """Load order, query listings from DB, call Perplexity for deliverable, persist (Pattern B)."""
     try:
-        res = supabase.table("search_blitz_orders").select("*").eq("id", order_id).single().execute()
+        res = (
+            supabase.table("search_blitz_orders")
+            .select("*")
+            .eq("id", order_id)
+            .single()
+            .execute()
+        )
     except Exception as exc:
-        raise HTTPException(status_code=404, detail=f"Order not found: {exc!s}") from exc
+        raise HTTPException(
+            status_code=404, detail=f"Order not found: {exc!s}"
+        ) from exc
 
     if not res.data:
         raise HTTPException(status_code=404, detail="Order not found.")
@@ -110,7 +123,9 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
             "message": "Order already fulfilled.",
         }
 
-    supabase.table("search_blitz_orders").update({"status": "running"}).eq("id", order_id).execute()
+    supabase.table("search_blitz_orders").update({"status": "running"}).eq(
+        "id", order_id
+    ).execute()
 
     crit = row.get("criteria") or {}
     city = row.get("city") or ""
@@ -135,10 +150,14 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
             q = q.gte("bedrooms", int(min_beds))
         if pet_ok:
             q = q.eq("pet_friendly", True)
-        list_res = q.order("compliance_score", desc=True).order("price").limit(25).execute()
+        list_res = (
+            q.order("compliance_score", desc=True).order("price").limit(25).execute()
+        )
     except Exception as exc:
         _fail_order(order_id, str(exc))
-        raise HTTPException(status_code=500, detail=f"Listing query failed: {exc!s}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Listing query failed: {exc!s}"
+        ) from exc
 
     listings = list_res.data or []
     snapshot = []
@@ -191,7 +210,9 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
             )
         if r.status_code >= 400:
             _fail_order(order_id, r.text[:2000])
-            raise HTTPException(status_code=502, detail=r.text[:1000] or "Perplexity request failed.")
+            raise HTTPException(
+                status_code=502, detail=r.text[:1000] or "Perplexity request failed."
+            )
         data = r.json()
         choices = data.get("choices") or []
         msg = (choices[0].get("message") or {}) if choices else {}
@@ -200,7 +221,9 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
         raise
     except Exception as exc:
         _fail_order(order_id, str(exc))
-        raise HTTPException(status_code=502, detail=f"Perplexity error: {exc!s}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Perplexity error: {exc!s}"
+        ) from exc
 
     if not report:
         _fail_order(order_id, "Empty report from model")
@@ -220,7 +243,9 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
         ).eq("id", order_id).execute()
     except Exception as exc:
         _fail_order(order_id, str(exc))
-        raise HTTPException(status_code=500, detail=f"Failed to save report: {exc!s}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save report: {exc!s}"
+        ) from exc
 
     return {
         "order_id": order_id,
@@ -239,24 +264,31 @@ async def create_search_blitz(request: SearchBlitzRequest):
     """
     criteria = {
         "annual_income": request.annual_income,
-        "max_rent_cad": request.max_rent_cad or round((request.annual_income / 12) * 0.40, 2),
+        "max_rent_cad": request.max_rent_cad
+        or round((request.annual_income / 12) * 0.40, 2),
         "min_bedrooms": request.min_bedrooms,
         "must_haves": request.must_haves,
         "pet_friendly": request.pet_friendly,
         "neighborhoods": request.neighborhoods,
     }
 
-    result = supabase.table("search_blitz_orders").insert(
-        {
-            "user_id": request.user_id,
-            "city": request.city,
-            "criteria": criteria,
-            "status": "pending",
-        }
-    ).execute()
+    result = (
+        supabase.table("search_blitz_orders")
+        .insert(
+            {
+                "user_id": request.user_id,
+                "city": request.city,
+                "criteria": criteria,
+                "status": "pending",
+            }
+        )
+        .execute()
+    )
 
     if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to create Search Blitz order")
+        raise HTTPException(
+            status_code=500, detail="Failed to create Search Blitz order"
+        )
 
     order = result.data[0]
 
@@ -276,7 +308,13 @@ async def create_search_blitz(request: SearchBlitzRequest):
 @router.get("/order/{order_id}")
 async def get_order_status(order_id: str):
     """Check the status of a Search Blitz order."""
-    result = supabase.table("search_blitz_orders").select("*").eq("id", order_id).single().execute()
+    result = (
+        supabase.table("search_blitz_orders")
+        .select("*")
+        .eq("id", order_id)
+        .single()
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=404, detail="Order not found")
     return result.data
