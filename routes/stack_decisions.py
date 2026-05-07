@@ -1,6 +1,7 @@
 # © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™
 
 import os
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -48,7 +49,8 @@ async def get_stack_decision_queue(
 
         result = query.execute()
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Database error: {str(exc)}")
+        logging.error(f"Database error: {exc}")
+        raise HTTPException(status_code=503, detail="Database error occurred.")
 
     rows = result.data or []
     return {"count": len(rows), "items": rows}
@@ -80,7 +82,8 @@ async def get_listing_stack_decision(
             .execute()
         )
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Database error: {str(exc)}")
+        logging.error(f"Database error: {exc}")
+        raise HTTPException(status_code=503, detail="Database error occurred.")
 
     if not latest.data:
         raise HTTPException(status_code=404, detail="No stack decision found for listing.")

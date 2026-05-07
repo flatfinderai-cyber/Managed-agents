@@ -11,6 +11,7 @@
 
 import os
 import uuid
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -99,13 +100,13 @@ class SearchPreferences(BaseModel):
 
 def _db_error(exc: Exception) -> HTTPException:
     """Convert a Supabase / network exception into a 503."""
-    msg = str(exc)
+    logging.error(f"Database error: {exc}")
     if not os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or not os.environ.get("SUPABASE_SERVICE_KEY"):
         return HTTPException(
             status_code=503,
             detail="Database not configured — add credentials to .env.local",
         )
-    return HTTPException(status_code=503, detail=f"Database error: {msg}")
+    return HTTPException(status_code=503, detail="Database error occurred.")
 
 
 def _now() -> str:

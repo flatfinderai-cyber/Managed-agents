@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -96,7 +97,8 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
     try:
         res = supabase.table("search_blitz_orders").select("*").eq("id", order_id).single().execute()
     except Exception as exc:
-        raise HTTPException(status_code=404, detail=f"Order not found: {exc!s}") from exc
+        logging.error(f"Error querying order: {exc}")
+        raise HTTPException(status_code=404, detail="Order not found") from exc
 
     if not res.data:
         raise HTTPException(status_code=404, detail="Order not found.")
@@ -137,8 +139,9 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
             q = q.eq("pet_friendly", True)
         list_res = q.order("compliance_score", desc=True).order("price").limit(25).execute()
     except Exception as exc:
+        logging.error(f"Error querying listings: {exc}")
         _fail_order(order_id, str(exc))
-        raise HTTPException(status_code=500, detail=f"Listing query failed: {exc!s}") from exc
+        raise HTTPException(status_code=500, detail="Listing query failed") from exc
 
     listings = list_res.data or []
     snapshot = []
@@ -199,8 +202,9 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as exc:
+        logging.error(f"Perplexity error: {exc}")
         _fail_order(order_id, str(exc))
-        raise HTTPException(status_code=502, detail=f"Perplexity error: {exc!s}") from exc
+        raise HTTPException(status_code=502, detail="Perplexity error occurred") from exc
 
     if not report:
         _fail_order(order_id, "Empty report from model")
@@ -219,8 +223,9 @@ def _fulfill_search_blitz_sync(order_id: str) -> dict[str, Any]:
             }
         ).eq("id", order_id).execute()
     except Exception as exc:
+        logging.error(f"Failed to save report: {exc}")
         _fail_order(order_id, str(exc))
-        raise HTTPException(status_code=500, detail=f"Failed to save report: {exc!s}") from exc
+        raise HTTPException(status_code=500, detail="Failed to save report") from exc
 
     return {
         "order_id": order_id,
@@ -303,5 +308,6 @@ async def fulfill_search_blitz(
     except HTTPException:
         raise
     except Exception as exc:
+        logging.error(f"Error fulfilling search blitz: {exc}")
         _fail_order(order_id, str(exc))
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Fulfillment process failed") from exc

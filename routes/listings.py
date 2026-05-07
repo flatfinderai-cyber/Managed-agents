@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import logging
 from typing import Any, Optional
 
 import httpx
@@ -258,14 +259,16 @@ async def listing_search_assist(body: ListingSearchAssistRequest):
         raw_obj = _extract_json_object(raw_text)
         filters = _raw_to_filters(raw_obj)
     except ValidationError as exc:
+        logging.error(f"Invalid search filters after model output: {exc}")
         raise HTTPException(
             status_code=422,
-            detail=f"Invalid search filters after model output: {exc!s}",
+            detail="Invalid search filters parsed from model output.",
         ) from exc
     except (ValueError, json.JSONDecodeError) as exc:
+        logging.error(f"Could not parse search filters from model: {exc}")
         raise HTTPException(
             status_code=502,
-            detail=f"Could not parse search filters from model: {exc!s}",
+            detail="Could not parse search filters from model output.",
         ) from exc
 
     query_params: dict[str, Any] = {"city": filters.city}
