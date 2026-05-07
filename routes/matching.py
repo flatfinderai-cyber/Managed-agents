@@ -14,6 +14,7 @@
 
 import os
 import uuid
+import logging
 from datetime import datetime, date, timezone
 from typing import List, Optional
 
@@ -40,12 +41,13 @@ _sb = create_client(
 
 
 def _db_error(exc: Exception) -> HTTPException:
+    logging.error(f"Database error: {exc}")
     if not os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or not os.environ.get("SUPABASE_SERVICE_KEY"):
         return HTTPException(
             status_code=503,
             detail="Database not configured — add credentials to .env.local",
         )
-    return HTTPException(status_code=503, detail=f"Database error: {str(exc)}")
+    return HTTPException(status_code=503, detail="Database error occurred.")
 
 
 def _now() -> str:
