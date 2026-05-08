@@ -1,6 +1,7 @@
 # © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™
 
 import os
+import secrets
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -21,7 +22,7 @@ def _require_internal_key(x_internal_key: Optional[str]) -> None:
             status_code=503,
             detail="Internal API key not configured — set INTERNAL_API_KEY in environment.",
         )
-    if not x_internal_key or x_internal_key != expected:
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, expected):
         raise HTTPException(status_code=403, detail="Forbidden. Invalid or missing internal API key.")
 
 
