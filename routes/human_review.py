@@ -17,6 +17,7 @@
 # Admin routes require x-internal-key header matching INTERNAL_API_KEY env var.
 
 import os
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
@@ -82,7 +83,7 @@ def _require_internal_key(x_internal_key: Optional[str]) -> None:
             status_code=503,
             detail="Internal API key not configured — set INTERNAL_API_KEY in environment.",
         )
-    if not x_internal_key or x_internal_key != expected:
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, expected):
         raise HTTPException(status_code=403, detail="Forbidden. Invalid or missing internal API key.")
 
 
