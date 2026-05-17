@@ -1,5 +1,6 @@
 # © 2024–2026 Lila Alexandra Olufemi Inglis Abegunrin. All Rights Reserved. FlatFinder™
 
+import secrets
 import os
 from typing import Optional
 
@@ -21,8 +22,10 @@ def _require_internal_key(x_internal_key: Optional[str]) -> None:
             status_code=503,
             detail="Internal API key not configured — set INTERNAL_API_KEY in environment.",
         )
-    if not x_internal_key or x_internal_key != expected:
-        raise HTTPException(status_code=403, detail="Forbidden. Invalid or missing internal API key.")
+    if not x_internal_key or not secrets.compare_digest(x_internal_key, expected):
+        raise HTTPException(
+            status_code=403, detail="Forbidden. Invalid or missing internal API key."
+        )
 
 
 @router.get("/queue")
@@ -39,7 +42,9 @@ async def get_stack_decision_queue(
     try:
         query = (
             _sb.table("listing_stack_decisions")
-            .select("*, listings(id, source, city, title, url, is_active, is_flagged, is_scam)")
+            .select(
+                "*, listings(id, source, city, title, url, is_active, is_flagged, is_scam)"
+            )
             .order("updated_at", desc=True)
             .limit(limit)
         )
@@ -83,7 +88,9 @@ async def get_listing_stack_decision(
         raise HTTPException(status_code=503, detail=f"Database error: {str(exc)}")
 
     if not latest.data:
-        raise HTTPException(status_code=404, detail="No stack decision found for listing.")
+        raise HTTPException(
+            status_code=404, detail="No stack decision found for listing."
+        )
 
     return {
         "current": latest.data,
