@@ -12,6 +12,7 @@
 
 import os
 from datetime import datetime, timezone, timedelta
+import secrets
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -180,7 +181,8 @@ async def send_message(thread_id: str, body: SendMessageRequest, current: Curren
     if not _user_in_thread_row(t, current):
         raise HTTPException(status_code=403, detail="Not a participant in this thread.")
     expected = str(t["tenant_id"] if body.sender_role == "tenant" else t["landlord_id"])
-    if expected != body.sender_id:
+        # Security fix: Use constant-time comparison to prevent timing attacks
+    if not secrets.compare_digest(expected, body.sender_id):
         raise HTTPException(
             status_code=422,
             detail="sender_id does not match this role on the thread.",
