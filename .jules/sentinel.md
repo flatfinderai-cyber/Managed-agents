@@ -1,0 +1,4 @@
+## 2024-05-19 - Fix Constant-Time Timing Attacks on API Keys and Auth IDs
+**Vulnerability:** The application used standard string equality operators (`!=` and `==`) to verify sensitive credentials such as the `INTERNAL_API_KEY` and role-based `sender_id` across multiple routes (e.g., `search_blitz.py`, `orchestrator.py`, `vmc.py`, etc). This exposed the API to timing attacks, where an attacker could deduce the secret byte-by-byte by measuring the time taken for the comparison to fail.
+**Learning:** Python's standard string comparison fails fast on the first mismatch. For any security-sensitive checks (tokens, API keys, IDs used for auth), constant-time comparison must be used to prevent information leakage through execution time.
+**Prevention:** Always import and use `secrets.compare_digest(a, b)` for checking sensitive tokens, passwords, or keys, rather than `a == b` or `a != b`.
